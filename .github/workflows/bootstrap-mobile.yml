@@ -1,0 +1,155 @@
+name: Local Yuki mobile source import
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: local-yuki-mobile-import
+  cancel-in-progress: true
+
+jobs:
+  import-source:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Import uploaded Local Yuki source bundle
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BUNDLE="local-yuki-source.zip"
+          MANIFEST="local-yuki-patch.json"
+
+          if [ ! -f "$BUNDLE" ]; then
+            echo "No $BUNDLE found at repository root. Nothing to import."
+            echo "imported=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Local Yuki overlay bundle found. Importing it..."
+          IMPORT_DIR="$RUNNER_TEMP/local-yuki-import"
+          rm -rf "$IMPORT_DIR"
+          mkdir -p "$IMPORT_DIR"
+
+          # Reject absolute paths, parent traversal, and Windows drive-root paths
+          # before anything is extracted onto the runner.
+          if zipinfo -1 "$BUNDLE" | grep -Eq '(^/|(^|/)\.\.(/|$)|^[A-Za-z]:[/\\])'; then
+            echo "Unsafe path detected in $BUNDLE."
+            exit 1
+          fi
+
+          unzip -q "$BUNDLE" -d "$IMPORT_DIR"
+
+          if [ ! -f "$IMPORT_DIR/$MANIFEST" ]; then
+            echo "The uploaded ZIP is not a Local Yuki overlay bundle: $MANIFEST is missing."
+            exit 1
+          fi
+
+          python3 - "$IMPORT_DIR/$MANIFEST" <<'PY'
+          import json, sys
+
+          manifest_path = sys.argv[1]
+          with open(manifest_path, encoding="utf-8") as f:
+              manifest = json.load(f)
+
+          if manifest.get("format") != 1:
+              raise SystemExit(f"Unsupported Local Yuki patch format: {manifest.get('format')!r}")
+
+          product = manifest.get("product")
+          if product not in (None, "Local Yuki"):
+              raise SystemExit(f"Unexpected patch product: {product!r}")
+          PY
+
+          # Overlay changed/new files only. Existing unrelated repository files remain untouched.
+          # The workflow directory is protected so an ordinary source bundle cannot rewrite
+          # the importer that is processing it.
+          rsync -a \
+            --exclude='.git/' \
+            --exclude='.github/workflows/' \
+            --exclude="$MANIFEST" \
+            "$IMPORT_DIR/" ./
+
+          # Optional explicit deletions. We intentionally do NOT use rsync --delete.
+          # Every deletion must be declared in the manifest and remain inside the repo.
+          python3 - "$IMPORT_DIR/$MANIFEST" <<'PY'
+          import json, pathlib, shutil, sys
+
+          manifest = json.load(open(sys.argv[1], encoding="utf-8"))
+          root = pathlib.Path.cwd().resolve()
+
+          for raw in manifest.get("delete", []):
+              rel = pathlib.PurePosixPath(str(raw))
+              value = str(rel)
+
+              if rel.is_absolute() or ".." in rel.parts:
+                  raise SystemExit(f"Unsafe delete path in Local Yuki patch: {raw}")
+              if value in ("", "."):
+                  raise SystemExit("Refusing to delete repository root.")
+              if value == ".git" or value.startswith(".git/"):
+                  raise SystemExit(f"Refusing to delete Git metadata: {raw}")
+              if value == ".github/workflows" or value.startswith(".github/workflows/"):
+                  raise SystemExit(f"Refusing to delete protected workflow path: {raw}")
+
+              target = (root / pathlib.Path(*rel.parts)).resolve()
+              if root not in target.parents:
+                  raise SystemExit(f"Delete path escapes repository: {raw}")
+
+              if target.is_dir() and not target.is_symlink():
+                  shutil.rmtree(target)
+              elif target.exists() or target.is_symlink():
+                  target.unlink()
+          PY
+
+          rm -rf "$IMPORT_DIR"
+          rm -f "$BUNDLE"
+
+          # The synchronization spine is our minimum repository-health marker during
+          # the model-freeze/scaffolding era. Later Akari can add Android build/test gates.
+          if [ ! -f PROJECT_HANDOFF/CURRENT_STATE.md ]; then
+            echo "PROJECT_HANDOFF/CURRENT_STATE.md is missing after import."
+            echo "The bundle may be incomplete or may not be a Local Yuki repository overlay."
+            exit 1
+          fi
+
+          git config user.name "local-yuki-build-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "Bundle produced no repository changes after wrapper removal."
+            echo "imported=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git commit -m "Import Local Yuki source overlay [skip ci]"
+          git push
+
+          EXPANDED_COMMIT="$(git rev-parse HEAD)"
+          echo "Expanded Local Yuki source commit: $EXPANDED_COMMIT"
+          echo "imported=true" >> "$GITHUB_OUTPUT"
+          echo "commit=$EXPANDED_COMMIT" >> "$GITHUB_OUTPUT"
+
+      - name: Record import summary
+        if: steps.source.outputs.imported == 'true'
+        shell: bash
+        run: |
+          {
+            echo "## Local Yuki mobile import"
+            echo
+            echo "Expanded source commit: \`${{ steps.source.outputs.commit }}\`"
+            echo
+            echo "The uploaded \`local-yuki-source.zip\` wrapper was expanded as an overlay, removed, committed, and pushed to \`main\`."
+            echo
+            echo "Android build/test certification is intentionally not part of this seed workflow yet. Akari will add the canonical gates after Phase 0 repository reconnaissance establishes the live Gradle/module structure."
+          } >> "$GITHUB_STEP_SUMMARY"
