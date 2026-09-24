@@ -34,10 +34,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Install platform and build tools
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Install platform and build tools using runner SDK
+        run: |
+          test -n "$ANDROID_HOME"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 3 -type f -name sdkmanager -print -quit)"
+          test -x "$SDKMANAGER"
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0'
       - name: Build, test, and verify foundation boundary
         run: ./gradlew --no-daemon :foundation-contracts:check :app:testDebugUnitTest :app:assembleDebug
       - name: Upload debug APK
