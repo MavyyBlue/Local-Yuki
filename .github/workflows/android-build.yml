@@ -40,8 +40,34 @@ jobs:
           SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 3 -type f -name sdkmanager -print -quit)"
           test -x "$SDKMANAGER"
           "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Restore fixed signing key
+        env:
+          LOCAL_YUKI_SIGNING_KEYSTORE_BASE64: ${{ secrets.LOCAL_YUKI_SIGNING_KEYSTORE_BASE64 }}
+          LOCAL_YUKI_SIGNING_PASSWORD: ${{ secrets.LOCAL_YUKI_SIGNING_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$LOCAL_YUKI_SIGNING_KEYSTORE_BASE64"
+          test -n "$LOCAL_YUKI_SIGNING_PASSWORD"
+          umask 077
+          printf '%s' "$LOCAL_YUKI_SIGNING_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/local-yuki-signing.p12"
+          keytool -list -v -keystore "$RUNNER_TEMP/local-yuki-signing.p12" \
+            -storetype PKCS12 -storepass:env LOCAL_YUKI_SIGNING_PASSWORD \
+            -alias local-yuki-continuity | grep -F \
+            'SHA256: 14:19:2D:22:5B:5D:ED:98:88:9E:3C:0B:D3:F7:04:D9:4C:1D:90:B9:31:BA:89:AB:0A:22:F4:8A:C9:6C:DD:2F'
       - name: Build, test, and verify foundation boundary
+        env:
+          LOCAL_YUKI_SIGNING_FILE: ${{ runner.temp }}/local-yuki-signing.p12
+          LOCAL_YUKI_SIGNING_PASSWORD: ${{ secrets.LOCAL_YUKI_SIGNING_PASSWORD }}
+          LOCAL_YUKI_VERSION_CODE: ${{ github.run_number }}
         run: ./gradlew --no-daemon :foundation-contracts:check :app:testDebugUnitTest :app:assembleDebug
+      - name: Verify APK signing certificate
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$APK"
+          DIGEST="$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$APK" |
+            sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr '[:upper:]' '[:lower:]')"
+          test "$DIGEST" = '14192d225b5ded98889e3c0bd3f704d94c1d90b931ba89ab0a22f48ac96cdd2f'
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
