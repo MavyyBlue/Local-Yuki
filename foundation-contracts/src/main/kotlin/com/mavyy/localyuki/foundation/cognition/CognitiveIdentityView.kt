@@ -21,9 +21,15 @@ fun interface CognitiveIdentityReader {
 /** Canonical seed projection; Phase 2B will own validated restoration from durable storage. */
 object CanonicalCognitiveIdentityReader : CognitiveIdentityReader {
     override fun read(): FoundationResult<CognitiveIdentityView> =
-        project(CanonicalIdentitySeed.snapshot(), CanonicalPersonalityCapsule.snapshot())
+        CognitiveIdentityProjector.project(CanonicalIdentitySeed.snapshot(), CanonicalPersonalityCapsule.snapshot())
 
-    internal fun project(identity: IdentityContinuitySnapshot, capsule: PersonalityCapsule): FoundationResult<CognitiveIdentityView> {
+    internal fun project(identity: IdentityContinuitySnapshot, capsule: PersonalityCapsule) =
+        CognitiveIdentityProjector.project(identity, capsule)
+}
+
+/** Shared semantic validator for reference seeds and restored app-owned continuity. */
+object CognitiveIdentityProjector {
+    fun project(identity: IdentityContinuitySnapshot, capsule: PersonalityCapsule): FoundationResult<CognitiveIdentityView> {
         if (identity != CanonicalIdentitySeed.snapshot() || capsule != CanonicalPersonalityCapsule.snapshot() ||
             identity.personalityCapsuleRef != PersonalityCapsuleRef(capsule.id, capsule.version) ||
             identity.honesty != capsule.honesty
