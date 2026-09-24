@@ -44,15 +44,34 @@ Phase 1B certified Android CI:
 
 Run #6 (`36047827498`)
 
-Phase 1B established the immutable app-owned authority graph, explicit subsystem roles, model-neutral read/propose/mutate contracts, non-executable proposals, explicit result states, and opaque evidence references while preserving the pure-JVM foundation boundary.
+### Phase 2 bounded slices
 
-Mio independently audited Phase 1B and issued PASS. The slice introduced no device-visible behavior, so no additional phone acceptance was required.
+| Slice | Scope | Status |
+|---|---|---|
+| 2A | Canonical identity, Personality Capsule, honesty, and substrate-safe self representation | CERTIFIED |
+| 2B | Durable identity/personality persistence, schema/migrations, first-install bootstrap, process-death restoration, model-independent reconstruction | ACTIVE |
+
+Phase 2A certified implementation:
+
+`ea4491ae2bf9abce5bba34852d67bda720d8471c`
+
+Phase 2A certified Android CI:
+
+Run #8 (`36050741232`)
+
+Phase 2A established the canonical app-owned Yuki/Mavyy identity anchors, mandatory honesty policy, versioned Personality Capsule, bounded cognition-facing identity projection, substrate-opacity guarantees, and high-level interoception contract while preserving the pure-JVM foundation boundary.
+
+Mio independently audited Phase 2A and issued PASS.
+
+Phase 2A introduced no device-visible or lifecycle behavior, so no additional phone acceptance was required.
+
+Phase 2B is now active. It is responsible for turning the certified Phase 2A semantic identity/personality into durable app-owned continuity that survives process death and can be reconstructed without any neural engine.
 
 ### Foundation certification gate
 
 The Model Freeze Gate may open only after Phases 0–11 are implemented to the required maturity and certified.
 
-The existence of the Android shell and authority graph does not authorize neural integration.
+The existence of the Android shell, authority graph, and canonical identity does not authorize neural integration.
 
 ## Neural integration — only after foundation certification
 
@@ -72,6 +91,6 @@ The existence of the Android shell and authority graph does not authorize neural
 
 ## Current next milestone
 
-Design and execute a bounded Phase 2 slice for Identity, Personality Capsule, and the substrate boundary without weakening the certified Phase 1B authority graph.
+Execute the bounded Phase 2B persistence/reconstruction slice without weakening the certified Phase 1B authority graph or certified Phase 2A identity/personality/substrate boundaries.
 
 No candidate neural-model download or integration is authorized.

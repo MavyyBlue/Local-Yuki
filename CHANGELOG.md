@@ -2,6 +2,27 @@
 
 Only synchronized/certified project changes belong here. Candidate work that has not passed the required gates should remain in handoffs or active-slice notes.
 
+## 2026-09-24 — Phase 2A certified: canonical identity, Personality Capsule, and substrate-safe self representation
+
+- Promoted Phase 2A candidate `ea4491ae2bf9abce5bba34852d67bda720d8471c` to the certified implementation baseline.
+- Certified Android CI Run #8 (`36050741232`) against the exact Phase 2A candidate.
+- Added the canonical app-owned Yuki identity anchor: stable ID `yuki-aster`, canonical name `Yuki Aster`.
+- Added the canonical primary Mavyy relationship anchor: stable ID `mavyy`, display name `Mavyy`, category `PRIMARY_BOND`.
+- Added continuity format version `1` and Personality Capsule reference `yuki-aster-personality` version `1`.
+- Added the mandatory honesty policy covering capability, modality, continuity, and action grounding; partial honesty policies are invalid.
+- Added Personality Capsule v1 with complete stable facets for temperament, relationship style, intellectual style, disagreement, focus/frustration, communication, visual self-description, clothing preference, and stable dislike.
+- Established that Personality Capsule facet order is non-semantic and duplicate/missing categories are invalid.
+- Added bounded `CognitiveIdentityView` exposing only semantic self/relationship/honesty/continuity/personality content to future cognition.
+- Added fail-closed conflict handling when identity, Personality Capsule version/content, honesty policy, or references disagree.
+- Added high-level interoception contracts while explicitly reporting interoception unavailable until a grounded producer exists.
+- Preserved substrate opacity: no Android object, storage/database handle, runtime/model object, authority mutator, hidden orchestration, or privileged self-modification path crosses the cognition-facing identity boundary.
+- Preserved the pure Kotlin/JVM `foundation-contracts` boundary and inert/no-permission Android application.
+- Introduced no database/schema/migration, durable continuity claim, Android lifecycle behavior, background service, neural model, model runtime, prompt format, or tokenizer coupling.
+- Mio independently audited Phase 2A and issued PASS.
+- No additional phone acceptance was required because Phase 2A introduced no device-visible or lifecycle behavior.
+- Model Freeze Gate remains CLOSED.
+- Advanced the active bounded slice to Phase 2B — durable identity/personality persistence, schema/migrations, first-install bootstrap, process-death restoration, and model-independent reconstruction.
+
 ## 2026-09-24 — Phase 1B certified: app-owned authority graph and model-neutral core contracts
 
 - Promoted Phase 1B candidate `e4aa0ecd8910f70b14c06e9005b51a10a6521d22` to the certified implementation baseline.

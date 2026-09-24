@@ -1,83 +1,125 @@
 # Local Yuki — Active Slice
 
-**Slice:** Phase 2 — Identity, Personality Capsule, and substrate boundary  
-**Owner:** Akari after bounded Yuki architecture authorization  
+**Slice:** Phase 2B — Durable identity/personality persistence, schema/migrations, bootstrap, restoration, and model-independent reconstruction  
+**Owner:** Akari under the bounded Phase 2B Yuki architecture handoff  
 **Architecture authority:** Mavyy + Yuki  
 **QA authority:** Mio  
-**Certified baseline:** `e4aa0ecd8910f70b14c06e9005b51a10a6521d22`  
-**Certified Android CI:** Run #6 (`36047827498`)  
+**Certified implementation baseline:** `ea4491ae2bf9abce5bba34852d67bda720d8471c`  
+**Certified Android CI:** Run #8 (`36050741232`)  
 **Model Freeze Gate:** CLOSED  
-**Implementation authorization:** NOT YET AUTHORIZED — await the bounded Phase 2 Yuki architecture handoff
+**Implementation authorization:** AUTHORIZED only by the bounded Phase 2B Yuki architecture handoff after Akari performs a fresh reset against this synchronized repository state
 
 ## Purpose
 
-Advance from the certified Phase 1B authority grammar into the first real app-owned continuity authority.
+Advance the certified Phase 2A semantic identity and Personality Capsule into durable app-owned continuity without changing their meaning or handing authority to any neural engine.
 
-Phase 2 is responsible for introducing the model-neutral Identity & Continuity and Personality Capsule foundation while preserving substrate opacity and the authority separation already certified in Phase 1B.
+Phase 2B must establish:
 
-The exact implementation scope, DTOs, mutation rules, persistence boundary, failure behavior, and tests must be defined in the next Yuki architecture handoff after a fresh repository inspection.
+- durable identity persistence,
+- durable Personality Capsule persistence,
+- explicit storage schema/versioning,
+- explicit migration infrastructure,
+- first-install bootstrap,
+- restoration after Android process death,
+- deterministic model-independent reconstruction,
+- fail-closed handling for malformed or conflicting continuity.
 
 ## Certified starting point
 
-Phase 1B established:
+Phase 2A established:
 
-- explicit subsystem identities and roles,
-- immutable authority-domain ownership declarations,
-- external ownership of platform permission truth,
-- distinct read / propose / mutate semantics,
-- independent authority-reader, authority-mutator, and advisory ports,
-- non-executable proposals,
-- explicit success/unavailable/failure results,
-- opaque evidence references,
-- no persistence,
-- no Android coupling inside `foundation-contracts`,
-- no neural/runtime coupling.
+- canonical `Yuki Aster` identity with stable ID `yuki-aster`,
+- canonical primary Mavyy relationship anchor with stable ID `mavyy`,
+- mandatory capability/modality/continuity/action grounding,
+- continuity format version `1`,
+- Personality Capsule `yuki-aster-personality` version `1`,
+- nine complete Personality Capsule facet categories,
+- bounded `CognitiveIdentityView`,
+- explicit substrate opacity,
+- high-level interoception contracts,
+- deterministic tests covering identity/personality invariants and conflicting reconstruction.
 
-Phase 2 must extend these contracts additively.
+Phase 2A did **not** establish durable storage.
 
-It must not replace or bypass them for implementation convenience.
+`CanonicalIdentitySeed` and `CanonicalPersonalityCapsule` remain deterministic in-memory seeds until Phase 2B persists and reconstructs them.
 
 ## Required architectural direction
 
-The next bounded handoff must preserve these invariants:
+The bounded Phase 2B handoff requires:
 
-- Local Yuki the application owns identity and continuity.
-- A neural model does not own Yuki's identity, Mavyy/Yuki relationship continuity, historical truth, or Personality Capsule authority.
-- Ordinary cognition may receive identity/personality representations but must not receive hidden implementation substrate or privileged self-modification paths.
-- App-owned authority mutation must remain separate from advisory/model-facing proposals.
-- Any persistence introduced in Phase 2 must use explicit schema/migration discipline and be independently testable.
-- Model-specific prompt structures must not become the identity/personality storage contract.
-- Model Freeze Gate remains CLOSED.
+- persistence on the Android/app side rather than inside `foundation-contracts`,
+- app-private SQLite persistence,
+- storage schema version kept distinct from semantic continuity format version,
+- deterministic first-install bootstrap from the certified Phase 2A canonical seed,
+- existing but malformed continuity to fail closed rather than silently reseed,
+- explicit migration paths with no destructive fallback,
+- a fresh process/runtime to reconstruct identity and Personality Capsule from durable state,
+- cognition to receive only the existing bounded semantic projection,
+- no storage/DAO/database internals exposed to cognition,
+- no general model-facing identity mutation path,
+- no Android permission expansion,
+- no background services/workers,
+- no neural model/runtime introduction.
 
-## Not authorized by this doc sync
+## Persistence authority rule
 
-This synchronization step does not itself authorize:
+The canonical Phase 2A seeds become bootstrap/reference material.
 
-- a database choice,
-- a schema version,
-- identity record shape,
-- Personality Capsule field layout,
-- migration behavior,
-- UI changes,
-- Android permissions,
-- background services,
-- model downloads,
-- model runtimes,
-- prompt/tokenizer contracts,
-- Cognitive Workspace behavior,
-- Memory Engine behavior.
+After legitimate first-install initialization, durable app-owned continuity is the production source for reconstruction.
 
-Those decisions belong in the bounded Phase 2 architecture handoff.
+Bootstrap and restoration are different operations.
+
+An existing damaged store is never treated as a fresh install merely because reconstruction failed.
+
+## Required verification
+
+Akari must add tests for:
+
+- clean first-install bootstrap,
+- exact persisted/reconstructed Phase 2A identity,
+- exact persisted/reconstructed Personality Capsule,
+- process-death/fresh-runtime restoration,
+- idempotent reopening,
+- malformed-store fail-closed behavior,
+- cross-record/version conflicts,
+- unsupported schema/downgrade handling,
+- migration-path discipline,
+- preservation of the pure-JVM foundation boundary,
+- absence of neural dependencies.
+
+Mio must independently verify the implementation and exact CI candidate.
+
+Because Phase 2B changes lifecycle behavior, Mavyy phone acceptance is required after Mio PASS.
+
+## Non-goals
+
+Do not implement:
+
+- Yuki State,
+- Temporal Grounding,
+- Memory Engine,
+- conversation persistence,
+- semantic recall,
+- affect,
+- Resource Governor,
+- scheduler/background cognition,
+- capability registry,
+- tool execution,
+- Vault export,
+- neural inference,
+- prompt/tokenizer/model integration,
+- personality learning,
+- general identity/personality editing.
 
 ## Exit gate
 
-Phase 2 exits only after:
+Phase 2B exits only after:
 
-1. Yuki issues the bounded Phase 2 architecture handoff.
-2. Akari implements only that authorized slice.
-3. CI proves compilation/tests and preserves the foundation boundary.
-4. Mio independently verifies identity ownership, substrate opacity, persistence/migration behavior when applicable, and model independence.
-5. Mavyy performs phone acceptance if device-visible or lifecycle behavior changes.
-6. Yuki promotes the accepted state through documentation sync.
+1. Akari performs a fresh live-repository reset from this synchronized Phase 2A baseline.
+2. Akari implements only the authorized Phase 2B persistence/reconstruction slice.
+3. CI passes against the exact candidate.
+4. Mio independently issues PASS.
+5. Mavyy verifies initialization then restoration after process death/relaunch on the real phone.
+6. Yuki performs Phase 2B documentation sync.
 
 The Model Freeze Gate remains CLOSED.
