@@ -8,8 +8,8 @@ Status legend: `NOT STARTED` / `ACTIVE` / `CANDIDATE` / `MIO PASS` / `PHONE ACCE
 
 | Phase | Scope | Status |
 |---|---|---|
-| 0 | Live repo reset / baseline lock | ACTIVE |
-| 1 | Core authority graph + subsystem interfaces | NOT STARTED |
+| 0 | Live repo reset / baseline lock | CERTIFIED |
+| 1 | Core authority graph + subsystem interfaces | ACTIVE |
 | 2 | Identity + Personality Capsule + substrate boundary | NOT STARTED |
 | 3 | Yuki State + Temporal Grounding | NOT STARTED |
 | 4 | Memory authority + provenance completion | NOT STARTED |
@@ -21,9 +21,30 @@ Status legend: `NOT STARTED` / `ACTIVE` / `CANDIDATE` / `MIO PASS` / `PHONE ACCE
 | 10 | Low-power background nervous system | NOT STARTED |
 | 11 | Cognitive Workspace + Reality Verification + neural sockets | NOT STARTED |
 
+### Phase 1 bounded slices
+
+| Slice | Scope | Status |
+|---|---|---|
+| 1A | Android body shell, foundation boundary, build certification | CERTIFIED |
+| 1B | App-owned authority graph + model-neutral core contracts | ACTIVE |
+
+Phase 1A certified baseline:
+
+`ab89ee27d8d005f2febef30cc6d05148a72dea55`
+
+Certified Android CI:
+
+Run #4 (`35945088085`)
+
+The Phase 1A baseline provides a reproducible Android shell, pure Kotlin/JVM `foundation-contracts` module, one-way `app → foundation-contracts` dependency, boundary verification, unit-test/build CI, and a debug APK accepted on the real phone.
+
+Phase 1B begins explicit authority contracts. It must not introduce persistence, Android coupling inside the foundation module, background systems, or real neural runtimes.
+
 ### Foundation certification gate
 
-The Model Freeze Gate may open only after Phases 0–11 are implemented to the required maturity and certified. Existing legacy model/runtime code may be inspected or preserved as compatibility baggage, but it must not define the new architecture.
+The Model Freeze Gate may open only after Phases 0–11 are implemented to the required maturity and certified.
+
+The existence of the Android shell does not authorize neural integration.
 
 ## Neural integration — only after foundation certification
 
@@ -43,4 +64,6 @@ The Model Freeze Gate may open only after Phases 0–11 are implemented to the r
 
 ## Current next milestone
 
-Complete Phase 0 and update `PROJECT_HANDOFF/CURRENT_STATE.md` with verified live-repository facts before selecting Phase 1 work.
+Complete and independently certify Phase 1B without weakening the Phase 1A foundation boundary.
+
+No candidate neural-model download or integration is authorized.
