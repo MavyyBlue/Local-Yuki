@@ -1,88 +1,83 @@
 # Local Yuki — Active Slice
 
-**Slice:** Phase 1B — App-owned authority graph and model-neutral core contracts  
-**Owner:** Akari  
+**Slice:** Phase 2 — Identity, Personality Capsule, and substrate boundary  
+**Owner:** Akari after bounded Yuki architecture authorization  
 **Architecture authority:** Mavyy + Yuki  
 **QA authority:** Mio  
-**Certified baseline:** `ab89ee27d8d005f2febef30cc6d05148a72dea55`  
-**Certified Android CI:** Run #4 (`35945088085`)  
+**Certified baseline:** `e4aa0ecd8910f70b14c06e9005b51a10a6521d22`  
+**Certified Android CI:** Run #6 (`36047827498`)  
 **Model Freeze Gate:** CLOSED  
-**Implementation authorization:** Only from the bounded Phase 1B Yuki architecture handoff
+**Implementation authorization:** NOT YET AUTHORIZED — await the bounded Phase 2 Yuki architecture handoff
 
 ## Purpose
 
-Use the certified pure-Kotlin `foundation-contracts` boundary to define the first explicit authority graph for Local Yuki without implementing persistence, Android capability access, background behavior, or neural inference.
+Advance from the certified Phase 1B authority grammar into the first real app-owned continuity authority.
 
-Phase 1B begins the model-neutral brain skeleton. It establishes who may own truth, who may read it, who may propose changes, and how unavailable/not-yet-implemented behavior is represented without fabrication.
+Phase 2 is responsible for introducing the model-neutral Identity & Continuity and Personality Capsule foundation while preserving substrate opacity and the authority separation already certified in Phase 1B.
 
-## Required direction
+The exact implementation scope, DTOs, mutation rules, persistence boundary, failure behavior, and tests must be defined in the next Yuki architecture handoff after a fresh repository inspection.
 
-The already-certified dependency direction remains:
+## Certified starting point
 
-```text
-app
- ↓
-foundation-contracts
-```
+Phase 1B established:
 
-`foundation-contracts` must remain independent of:
+- explicit subsystem identities and roles,
+- immutable authority-domain ownership declarations,
+- external ownership of platform permission truth,
+- distinct read / propose / mutate semantics,
+- independent authority-reader, authority-mutator, and advisory ports,
+- non-executable proposals,
+- explicit success/unavailable/failure results,
+- opaque evidence references,
+- no persistence,
+- no Android coupling inside `foundation-contracts`,
+- no neural/runtime coupling.
 
-- Android framework APIs,
-- persistence/database implementations,
+Phase 2 must extend these contracts additively.
+
+It must not replace or bypass them for implementation convenience.
+
+## Required architectural direction
+
+The next bounded handoff must preserve these invariants:
+
+- Local Yuki the application owns identity and continuity.
+- A neural model does not own Yuki's identity, Mavyy/Yuki relationship continuity, historical truth, or Personality Capsule authority.
+- Ordinary cognition may receive identity/personality representations but must not receive hidden implementation substrate or privileged self-modification paths.
+- App-owned authority mutation must remain separate from advisory/model-facing proposals.
+- Any persistence introduced in Phase 2 must use explicit schema/migration discipline and be independently testable.
+- Model-specific prompt structures must not become the identity/personality storage contract.
+- Model Freeze Gate remains CLOSED.
+
+## Not authorized by this doc sync
+
+This synchronization step does not itself authorize:
+
+- a database choice,
+- a schema version,
+- identity record shape,
+- Personality Capsule field layout,
+- migration behavior,
+- UI changes,
+- Android permissions,
+- background services,
+- model downloads,
 - model runtimes,
-- tokenizer/prompt formats,
-- JNI/native inference,
-- UI frameworks.
-
-## Intended Phase 1B scope
-
-The architecture handoff may authorize model-neutral contracts for:
-
-- shared authority/read/propose/mutate semantics,
-- model-independent evidence/provenance references,
-- explicit availability/unavailability/failure results,
-- foundational subsystem identity/role declarations,
-- the first app-owned authority interfaces needed to express dependency direction,
-- deterministic/mock/no-op implementations required to compile and test the graph.
-
-This slice should define contracts, not full subsystem behavior.
-
-## Must not implement yet
-
-- database/schema/migrations,
-- durable identity storage,
-- Personality Capsule persistence,
-- Yuki State persistence,
-- Memory Engine behavior,
-- semantic retrieval,
-- affect learning,
-- Android capabilities or permissions,
-- tool execution,
-- Resource Governor,
-- sleep/recovery,
-- background nervous system,
+- prompt/tokenizer contracts,
 - Cognitive Workspace behavior,
-- real neural engines or model downloads.
+- Memory Engine behavior.
 
-## Test expectations
-
-Phase 1B must prove:
-
-- authority ownership is explicit,
-- proposal is distinguishable from mutation,
-- model-facing/advisory contracts cannot become deterministic authority by interface design,
-- contracts remain deterministic and platform/model neutral,
-- dependency direction remains clean,
-- unavailable/failure states cannot be mistaken for successful execution.
+Those decisions belong in the bounded Phase 2 architecture handoff.
 
 ## Exit gate
 
-Phase 1B exits only after:
+Phase 2 exits only after:
 
-1. Akari implements the bounded contract slice.
-2. CI proves compilation/tests and foundation-boundary purity.
-3. Mio independently verifies authority direction and model independence.
-4. Mavyy performs phone acceptance only if device-visible behavior changes.
-5. Yuki promotes the accepted state through documentation sync.
+1. Yuki issues the bounded Phase 2 architecture handoff.
+2. Akari implements only that authorized slice.
+3. CI proves compilation/tests and preserves the foundation boundary.
+4. Mio independently verifies identity ownership, substrate opacity, persistence/migration behavior when applicable, and model independence.
+5. Mavyy performs phone acceptance if device-visible or lifecycle behavior changes.
+6. Yuki promotes the accepted state through documentation sync.
 
 The Model Freeze Gate remains CLOSED.

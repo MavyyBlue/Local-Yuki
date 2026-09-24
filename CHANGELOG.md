@@ -2,6 +2,26 @@
 
 Only synchronized/certified project changes belong here. Candidate work that has not passed the required gates should remain in handoffs or active-slice notes.
 
+## 2026-09-24 — Phase 1B certified: app-owned authority graph and model-neutral core contracts
+
+- Promoted Phase 1B candidate `e4aa0ecd8910f70b14c06e9005b51a10a6521d22` to the certified implementation baseline.
+- Certified Android CI Run #6 (`36047827498`) against the exact Phase 1B candidate.
+- Added the immutable core subsystem catalog and role classifications for authority, coordinator, control, grounding, and advisory components.
+- Added 13 explicit authority domains with one declared owner each.
+- Kept `PLATFORM_PERMISSION_STATE` externally owned by the platform rather than by Local Yuki cognition.
+- Added explicit READ / PROPOSE / MUTATE semantics.
+- Added independent `AuthorityReader`, `AuthorityMutator`, and `AdvisoryPort` contracts so advisory/model-facing paths do not inherit mutation authority.
+- Added non-executable proposal values carrying proposer identity and opaque evidence references.
+- Added explicit `Success`, `Unavailable`, and `Failure` foundation outcomes.
+- Added model-independent evidence/provenance references without introducing storage or resolution behavior.
+- Added deterministic JVM tests covering exact authority ownership, advisory nonownership, cross-domain mutation denial, proposal/mutation separation, explicit result variants, and immutable declarations.
+- Preserved the Phase 1A pure-JVM foundation boundary, inert Android launcher, no-permission manifest, and existing build workflow.
+- Introduced no database/schema/migration, Android coupling, background behavior, neural model, neural runtime, prompt format, or tokenizer coupling.
+- Mio independently audited the Phase 1B authority/model-independence boundaries and issued PASS.
+- No additional phone acceptance was required because Phase 1B introduced no device-visible or lifecycle behavior.
+- Model Freeze Gate remains CLOSED.
+- Advanced the active slice to Phase 2 — Identity, Personality Capsule, and substrate boundary.
+
 ## 2026-09-24 — Phase 1A certified: Android body shell and foundation boundary
 
 - Promoted Phase 0 reconnaissance to completed baseline knowledge: the new repository began without an inherited Android application or legacy Local Yuki runtime.

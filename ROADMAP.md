@@ -9,8 +9,8 @@ Status legend: `NOT STARTED` / `ACTIVE` / `CANDIDATE` / `MIO PASS` / `PHONE ACCE
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Live repo reset / baseline lock | CERTIFIED |
-| 1 | Core authority graph + subsystem interfaces | ACTIVE |
-| 2 | Identity + Personality Capsule + substrate boundary | NOT STARTED |
+| 1 | Core authority graph + subsystem interfaces | CERTIFIED |
+| 2 | Identity + Personality Capsule + substrate boundary | ACTIVE |
 | 3 | Yuki State + Temporal Grounding | NOT STARTED |
 | 4 | Memory authority + provenance completion | NOT STARTED |
 | 5 | Living memory + semantic-recall socket | NOT STARTED |
@@ -26,25 +26,33 @@ Status legend: `NOT STARTED` / `ACTIVE` / `CANDIDATE` / `MIO PASS` / `PHONE ACCE
 | Slice | Scope | Status |
 |---|---|---|
 | 1A | Android body shell, foundation boundary, build certification | CERTIFIED |
-| 1B | App-owned authority graph + model-neutral core contracts | ACTIVE |
+| 1B | App-owned authority graph + model-neutral core contracts | CERTIFIED |
 
-Phase 1A certified baseline:
+Phase 1A certified implementation:
 
 `ab89ee27d8d005f2febef30cc6d05148a72dea55`
 
-Certified Android CI:
+Phase 1A certified Android CI:
 
 Run #4 (`35945088085`)
 
-The Phase 1A baseline provides a reproducible Android shell, pure Kotlin/JVM `foundation-contracts` module, one-way `app → foundation-contracts` dependency, boundary verification, unit-test/build CI, and a debug APK accepted on the real phone.
+Phase 1B certified implementation:
 
-Phase 1B begins explicit authority contracts. It must not introduce persistence, Android coupling inside the foundation module, background systems, or real neural runtimes.
+`e4aa0ecd8910f70b14c06e9005b51a10a6521d22`
+
+Phase 1B certified Android CI:
+
+Run #6 (`36047827498`)
+
+Phase 1B established the immutable app-owned authority graph, explicit subsystem roles, model-neutral read/propose/mutate contracts, non-executable proposals, explicit result states, and opaque evidence references while preserving the pure-JVM foundation boundary.
+
+Mio independently audited Phase 1B and issued PASS. The slice introduced no device-visible behavior, so no additional phone acceptance was required.
 
 ### Foundation certification gate
 
 The Model Freeze Gate may open only after Phases 0–11 are implemented to the required maturity and certified.
 
-The existence of the Android shell does not authorize neural integration.
+The existence of the Android shell and authority graph does not authorize neural integration.
 
 ## Neural integration — only after foundation certification
 
@@ -64,6 +72,6 @@ The existence of the Android shell does not authorize neural integration.
 
 ## Current next milestone
 
-Complete and independently certify Phase 1B without weakening the Phase 1A foundation boundary.
+Design and execute a bounded Phase 2 slice for Identity, Personality Capsule, and the substrate boundary without weakening the certified Phase 1B authority graph.
 
 No candidate neural-model download or integration is authorized.
