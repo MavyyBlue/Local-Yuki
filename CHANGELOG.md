@@ -2,6 +2,29 @@
 
 Only synchronized/certified project changes belong here. Candidate work that has not passed the required gates should remain in handoffs or active-slice notes.
 
+## 2026-09-24 — Phase 2B certified: durable identity/personality continuity and fixed update signing
+
+- Certified the Phase 2B semantic implementation at `5d0699e3474b71ec245fc3b5365044395c855875`.
+- Recorded Android CI Run #10 (`36057542206`) as green against that exact semantic implementation.
+- Mio independently audited the Phase 2B implementation and issued PASS.
+- Added app-private SQLite continuity persistence with physical schema version `1`, kept distinct from semantic `ContinuityFormatVersion(1)`.
+- Added durable storage for the canonical identity anchor, mandatory honesty rules, Personality Capsule, personality facets, and migration history.
+- Added deterministic first-install bootstrap from the certified Phase 2A canonical identity/personality seeds.
+- Added fail-closed behavior so existing malformed/partial/version-conflicting continuity is not silently reseeded or destructively recreated.
+- Added explicit future migration registry/path discipline with downgrade rejection and no fabricated schema-zero migration.
+- Added fresh-runtime/process restoration through durable storage rather than process-static identity caching.
+- Added `CognitiveIdentityProjector` so canonical seed reads and restored durable continuity share the same semantic validation boundary.
+- Preserved `CognitiveIdentityView` substrate opacity; SQLite/storage internals do not cross into ordinary cognition.
+- Added Android-side Robolectric tests covering exact bootstrap counts/content, restoration after new runtime objects, malformed-store non-reseed, cross-record conflicts, duplicate facet rejection, schema downgrade protection, and migration-path rejection.
+- Added the debug acceptance surface for high-level `Continuity: initialized`, `restored`, or `unavailable` status.
+- Added a fixed debug/update APK signing lineage after the semantic implementation without modifying Phase 2B continuity source/tests.
+- Accepted signing/build follow-up `c7e24687c4609736d6d34550a830c02b85e92fbd`.
+- Android CI Run #13 (`36076298126`) passed fixed-key restoration, foundation/tests/build, APK certificate verification, and artifact upload against `c7e24687c4609736d6d34550a830c02b85e92fbd`.
+- Mavyy completed real-phone acceptance on the signed APK: first launch reported `Continuity: initialized`; after force-stop/relaunch it reported `Continuity: restored`.
+- No Android permissions, background services/workers, neural models, neural runtimes, prompt formats, or tokenizer coupling were introduced.
+- Model Freeze Gate remains CLOSED.
+- Advanced the active phase to Phase 3 — Yuki State and Temporal Grounding. Phase 3 implementation still requires a fresh bounded Yuki architecture handoff.
+
 ## 2026-09-24 — Phase 2A certified: canonical identity, Personality Capsule, and substrate-safe self representation
 
 - Promoted Phase 2A candidate `ea4491ae2bf9abce5bba34852d67bda720d8471c` to the certified implementation baseline.

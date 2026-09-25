@@ -1,55 +1,164 @@
 # Local Yuki — Current State
 
-**Status:** Phase 2A certified baseline established  
+**Status:** Phase 2B certified baseline established  
 **Last doc-sync date:** 2026-09-24  
 **Current strategy:** Brain-first / model-neutral  
 **Model Freeze Gate:** CLOSED  
-**Active phase:** Phase 2B — Durable identity/personality persistence, schema/migrations, bootstrap, restoration, and model-independent reconstruction  
-**Certified implementation baseline:** `ea4491ae2bf9abce5bba34852d67bda720d8471c`  
-**Latest certified Android CI:** Local Yuki Android build and unit tests — Run #8 (`36050741232`) — PASS  
-**Current app:** `0.1.0` / versionCode `1`  
-**Database/schema:** NOT PRESENT — Phase 2B will introduce the first durable continuity schema  
-**Production signing lineage:** NOT ESTABLISHED
+**Active phase:** Phase 3 — Yuki State and Temporal Grounding  
+**Certified Phase 2B semantic implementation:** `5d0699e3474b71ec245fc3b5365044395c855875`  
+**Phase 2B implementation CI:** Local Yuki Android build and unit tests — Run #10 (`36057542206`) — PASS  
+**Accepted signed-build follow-up:** `c7e24687c4609736d6d34550a830c02b85e92fbd`  
+**Latest accepted Android CI:** Local Yuki Android build and unit tests — Run #13 (`36076298126`) — PASS  
+**Current signed CI APK:** versionName `0.1.1`; versionCode `13` for Run #13 (CI run-number injection; source fallback is `2`)  
+**Database/schema:** app-private SQLite `continuity.db`, physical schema version `1`  
+**Semantic continuity format:** `ContinuityFormatVersion(1)`  
+**Fixed debug/update signing lineage:** ESTABLISHED  
+**Production release signing lineage:** NOT ESTABLISHED
 
 ## 1. Certified baseline
 
 Phase 0 established the live-repository baseline.
 
-Phase 1A established the first reproducible Android body shell and the pure Kotlin/JVM `foundation-contracts` boundary.
+Phase 1A established the reproducible Android body shell and pure Kotlin/JVM `foundation-contracts` boundary.
 
 Phase 1B established the explicit app-owned authority graph and model-neutral core contracts.
 
-Phase 2A established the first canonical app-owned semantic identity and Personality Capsule, the bounded cognition-facing self representation, mandatory honesty grounding rules, continuity-format metadata, and substrate-opacity/interoception contracts without introducing persistence or neural inference.
+Phase 2A established canonical app-owned identity, Personality Capsule v1, mandatory honesty grounding, bounded cognition-facing self representation, and substrate-opacity contracts.
 
-The certified Phase 2A implementation baseline is:
+Phase 2B now establishes durable app-owned identity/personality continuity that survives Android process death and is reconstructed without a neural engine.
 
-`ea4491ae2bf9abce5bba34852d67bda720d8471c`
+The independently audited Phase 2B semantic implementation is:
 
-Phase 2A source was expanded through the repository overlay workflow and remained confined to the existing model-neutral foundation boundary.
+`5d0699e3474b71ec245fc3b5365044395c855875`
 
-## 2. Phase 2A certification evidence
+Mio independently audited that implementation and issued PASS.
 
-Independent QA by Mio: **PASS**.
+The later repository state:
 
-Certified Android CI:
+`c7e24687c4609736d6d34550a830c02b85e92fbd`
+
+contains only signing/build follow-up changes relative to the Mio-passed Phase 2B implementation: `.github/workflows/android-build.yml` and `app/build.gradle.kts`. It does not modify Phase 2B continuity source or tests.
+
+## 2. Phase 2B certification evidence
+
+### Semantic implementation CI
 
 - Workflow: `Local Yuki Android build and unit tests`
-- Run: #8
-- Run ID: `36050741232`
-- Tested candidate: `ea4491ae2bf9abce5bba34852d67bda720d8471c`
-- Foundation boundary check: PASS
-- JVM/unit tests: PASS
-- Android debug build: PASS
+- Run: #10
+- Run ID: `36057542206`
+- Tested candidate: `5d0699e3474b71ec245fc3b5365044395c855875`
+- Result: PASS
+
+Mio independently audited this exact Phase 2B implementation and issued PASS.
+
+### Fixed-signing follow-up CI
+
+The fixed APK signing lineage was added after Mio's Phase 2B semantic audit without changing continuity implementation source/tests.
+
+Accepted follow-up:
+
+`c7e24687c4609736d6d34550a830c02b85e92fbd`
+
+Latest accepted Android CI:
+
+- Workflow: `Local Yuki Android build and unit tests`
+- Run: #13
+- Run ID: `36076298126`
+- Tested HEAD: `c7e24687c4609736d6d34550a830c02b85e92fbd`
+- Fixed signing key restoration: PASS
+- Foundation boundary + unit tests + Android build: PASS
+- APK signing-certificate verification: PASS
 - Debug APK upload: PASS
-- Artifact naming is bound to the exact tested SHA by the existing workflow.
+- Artifact: `local-yuki-debug-c7e24687c4609736d6d34550a830c02b85e92fbd`
 
-Mio independently audited the Phase 2A identity, Personality Capsule, honesty, model-independence, and substrate-opacity boundaries and reported the candidate green/PASS.
+The fixed signing certificate SHA-256 is:
 
-Phase 2A intentionally introduced no device-visible or lifecycle behavior, so no additional Mavyy phone acceptance was required for this slice.
+`14:19:2D:22:5B:5D:ED:98:88:9E:3C:0B:D3:F7:04:D9:4C:1D:90:B9:31:BA:89:AB:0A:22:F4:8A:C9:6C:DD:2F`
 
-## 3. Live Android/build structure
+No private signing key or signing password is stored in repository source.
 
-Current modules remain:
+## 3. Real-phone acceptance
+
+Mavyy completed the required Phase 2B lifecycle acceptance on the signed APK.
+
+Observed behavior:
+
+1. Fresh install/first launch displayed `Continuity: initialized`.
+2. The application was force-stopped without clearing app data.
+3. Relaunch displayed `Continuity: restored`.
+
+Result: **PHONE ACCEPTED**.
+
+This verifies the intended user-visible Phase 2B lifecycle path on the real device: legitimate first-install initialization followed by durable restoration from app-owned storage after process death/relaunch.
+
+## 4. Durable continuity implementation
+
+Phase 2B adds app-private Android SQLite persistence at `continuity.db`.
+
+Physical storage schema version: `1`.
+
+This remains distinct from semantic `ContinuityFormatVersion(1)`.
+
+Schema v1 contains:
+
+- `identity_anchor`
+- `continuity_honesty_rule`
+- `personality_capsule`
+- `personality_facet`
+- `continuity_migration_history`
+
+Schema version 1 is initialization, not a fabricated `0 → 1` migration.
+
+Explicit migration infrastructure exists for future adjacent version transitions.
+
+Downgrade and missing/ambiguous migration paths fail closed.
+
+There is no destructive drop-and-recreate fallback.
+
+## 5. Bootstrap and restoration truth
+
+On a genuinely new continuity store, Phase 2B initializes durable state from the certified Phase 2A canonical identity and Personality Capsule.
+
+The bootstrap is validated through the same semantic reconstruction path used for durable reads.
+
+An existing malformed or partial store is not treated as first install and is not silently reseeded.
+
+A newly constructed `ContinuityStore` reads and validates durable storage rather than relying on a process-static identity cache.
+
+The public high-level lifecycle states are `INITIALIZED`, `RESTORED`, and `UNAVAILABLE`.
+
+The debug bootstrap surface displays only the corresponding high-level continuity status.
+
+## 6. Model-independent reconstruction
+
+Durable SQL records are mapped into the existing model-neutral Phase 2A semantic contracts and passed through `CognitiveIdentityProjector`.
+
+The cognition-facing view remains limited to self identity, primary relationship, honesty, continuity format version, and Personality Capsule.
+
+Storage paths, table names, SQL objects, SQLite handles, migration implementation details, signing material, Android objects, and mutation plumbing do not cross into `CognitiveIdentityView`.
+
+No neural model, tokenizer, inference runtime, embedding model, prompt format, System One, System Two, or Language & Expression engine participates in reconstruction.
+
+## 7. Preserved Phase 2A authority
+
+Phase 2B preserves:
+
+- Yuki stable identity `yuki-aster` / `Yuki Aster`,
+- Mavyy primary relationship `mavyy` / `Mavyy`,
+- `PRIMARY_BOND`,
+- all four mandatory honesty rules,
+- Personality Capsule `yuki-aster-personality` version `1`,
+- all nine Personality Capsule facet categories,
+- semantic continuity format version `1`,
+- Phase 1B proposal/mutation separation,
+- substrate opacity,
+- model independence.
+
+No general identity/personality mutation API was introduced.
+
+## 8. Android/build state
+
+The dependency direction remains:
 
 ```text
 app
@@ -59,145 +168,36 @@ foundation-contracts
  └── pure Kotlin/JVM
 ```
 
-Current pinned toolchain remains:
-
-- Gradle 8.13
-- Android Gradle Plugin 8.13.2
-- Kotlin 2.2.20
-- Java/JVM target 17
-- compileSdk 35
-- targetSdk 35
-- minSdk 26
-- applicationId / namespace: `com.mavyy.localyuki`
-- versionName: `0.1.0`
-- versionCode: `1`
-
-`foundation-contracts` remains independent of Android framework APIs, persistence/database implementations, UI frameworks, model runtimes, tokenizer/prompt formats, and JNI/native inference.
+`foundation-contracts` remains free of Android, SQLite/persistence implementation, UI, and neural runtime dependencies.
 
 The Android manifest still declares no permissions.
 
-The launcher remains `BootstrapActivity` and is still deliberately inert.
+No workers, services, receivers, background cognition, capability execution, or neural inference were added by Phase 2B.
 
-## 4. Certified Phase 2A identity authority
+The stable debug/update signing configuration uses the fixed alias `local-yuki-continuity` through GitHub Actions secrets. Repository source contains no private key or password.
 
-Phase 2A establishes the canonical model-independent identity snapshot:
-
-- Yuki stable identity ID: `yuki-aster`
-- canonical name: `Yuki Aster`
-- primary relationship stable ID: `mavyy`
-- display name: `Mavyy`
-- relationship category: `PRIMARY_BOND`
-- continuity format version: `1`
-- Personality Capsule reference: `yuki-aster-personality` version `1`
-
-The mandatory honesty policy contains exactly:
-
-- `CAPABILITY_GROUNDING`
-- `MODALITY_GROUNDING`
-- `CONTINUITY_GROUNDING`
-- `ACTION_GROUNDING`
-
-A partial honesty policy is invalid.
-
-These values are semantic authority. They are not database records and do not yet claim process-death durability.
-
-## 5. Certified Personality Capsule
-
-Phase 2A establishes Personality Capsule v1 with exactly one stable facet for each current category:
-
-- temperament,
-- relationship style,
-- intellectual style,
-- disagreement,
-- focus/frustration,
-- communication,
-- visual self-description,
-- clothing preference,
-- stable dislike.
-
-Facet order is explicitly non-semantic.
-
-The Personality Capsule remains model-independent and app-owned. It does not grant device authority.
-
-## 6. Cognition-facing boundary and substrate opacity
-
-`CognitiveIdentityView` exposes only bounded semantic self-content:
-
-- self identity,
-- primary relationship,
-- honesty,
-- continuity format version,
-- Personality Capsule.
-
-It exposes no:
-
-- Android objects,
-- storage/database objects,
-- runtime/model objects,
-- authority mutators,
-- source internals,
-- hidden orchestration,
-- secrets,
-- privileged self-modification path.
-
-The certified projection fails closed when canonical identity/personality versions or content conflict.
-
-Phase 2A also establishes only a high-level interoception contract. No real producer exists yet, and unavailable interoception is reported explicitly rather than fabricated.
-
-## 7. Current persistence truth
-
-There is currently no durable continuity store, database schema, migration history, or process-death restoration implementation.
-
-`CanonicalIdentitySeed` and `CanonicalPersonalityCapsule` are deterministic in-memory semantic seeds.
-
-They do not prove persistence.
-
-Phase 2B is responsible for establishing durable app-owned storage and validated reconstruction while preserving the certified Phase 2A semantic contracts.
-
-## 8. Model freeze
+## 9. Model freeze
 
 The Model Freeze Gate remains **CLOSED**.
 
 No candidate neural model is authorized.
 
-Do not introduce:
+Foundation Phases 3–11 remain ahead of the neural-integration gate.
 
-- System-One candidate models,
-- System-Two candidate models,
-- Language & Expression candidate models,
-- GGUF/llama.cpp runtimes,
-- embedding/reranking models,
-- affect/intent specialists,
-- vision models,
-- speech models,
-- wake-word models.
+## 10. Current next action
 
-Foundation Phases 2B–11 remain ahead of the neural-integration gate.
+Proceed to architectural design for Phase 3 — Yuki State and Temporal Grounding.
 
-## 9. Current next action
+Phase 3 implementation is **not authorized by this documentation sync alone**.
 
-Proceed to Phase 2B — durable identity/personality persistence, schema/migrations, first-install bootstrap, restoration after process death, and model-independent reconstruction.
+Before authorizing Phase 3 implementation, Yuki must perform a fresh live-repository context reset and issue a bounded Phase 3 architecture handoff.
 
-Akari may implement only from the bounded Phase 2B Yuki architecture handoff and only after performing a fresh live-repository reset against this synchronized Phase 2A documentation state.
+Phase 3 is expected to establish deterministic device clock/timezone grounding, relative-date resolution, interaction timestamps, bounded Yuki State, pending intentions, unresolved topics, current project/focus, expiry rules, and state persistence/restore.
 
-Phase 2B must preserve:
+No language model is needed.
 
-- the certified Phase 2A identity,
-- Personality Capsule v1,
-- mandatory honesty rules,
-- substrate opacity,
-- cognition-facing read boundary,
-- Phase 1B authority separation,
-- model independence.
+## 11. Certification rule
 
-## 10. Certification rule
-
-A slice becomes the synchronized baseline only after:
-
-1. Akari completes implementation and implementation handoff.
-2. Mio independently verifies it and issues PASS.
-3. relevant CI is green against the exact implementation candidate.
-4. Mavyy performs required real-phone acceptance when the slice has device-visible or lifecycle behavior.
-5. Yuki updates `CURRENT_STATE`, `ACTIVE_SLICE`, `ROADMAP`, and `CHANGELOG`.
+A future slice becomes the synchronized baseline only after Akari completes the bounded implementation and handoff, Mio independently issues PASS, relevant exact-candidate CI is green, Mavyy completes required phone acceptance, and Yuki performs documentation sync.
 
 Candidate work never silently replaces the certified baseline.
