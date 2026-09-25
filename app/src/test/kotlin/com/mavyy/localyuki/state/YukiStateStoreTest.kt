@@ -17,6 +17,10 @@ import java.time.*
 
 @RunWith(RobolectricTestRunner::class) @Config(sdk = [35])
 class YukiStateStoreTest {
+    private fun removeMemorySchema(db: SQLiteDatabase) {
+        listOf("memory_checkpoint", "memory_audit", "memory_provenance", "memory_revision",
+            "durable_memory", "memory_evidence", "memory_thread", "memory_metadata").forEach { db.execSQL("DROP TABLE $it") }
+    }
     private lateinit var context: Context
     private var instant = Instant.parse("2026-09-24T12:00:00Z")
     private var zone = ZoneId.of("America/Chicago")
@@ -97,6 +101,7 @@ class YukiStateStoreTest {
     @Test fun migrationFailureRollsBackWithoutReseedingIdentity() {
         ContinuityStore(context).use { it.open() }
         db().use { db ->
+            removeMemorySchema(db)
             listOf("state_interaction", "state_topic", "state_intention", "yuki_state").forEach { db.execSQL("DROP TABLE $it") }
             db.execSQL("UPDATE identity_anchor SET self_id='malformed'")
             db.version = 1
@@ -135,6 +140,7 @@ class YukiStateStoreTest {
     @Test fun migrationPreservesIdentityRowsAndHistory() {
         ContinuityStore(context).use { it.open() }
         db().use { db ->
+            removeMemorySchema(db)
             listOf("state_interaction", "state_topic", "state_intention", "yuki_state").forEach { db.execSQL("DROP TABLE $it") }
             db.version = 1
         }
@@ -142,10 +148,11 @@ class YukiStateStoreTest {
         ContinuityStore(context).use { assertEquals(expected, it.open().reader.read()) }
         YukiStateStore(context, temporal).use { assertEquals(YukiStateStore.Start.INITIALIZED, it.open().status) }
         db().use { db ->
-            assertEquals(2, db.version)
+            assertEquals(3, db.version)
             db.rawQuery("SELECT migration_id FROM continuity_migration_history ORDER BY migration_id", null).use { c ->
-                assertEquals(1, c.count)
-                c.moveToFirst(); assertEquals("2026-09-24-yuki-state-v1", c.getString(0))
+                assertEquals(2, c.count)
+                c.moveToFirst(); assertEquals("2026-09-24-memory-authority-v1", c.getString(0))
+                c.moveToNext(); assertEquals("2026-09-24-yuki-state-v1", c.getString(0))
             }
         }
     }

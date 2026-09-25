@@ -14,7 +14,7 @@ import com.mavyy.localyuki.foundation.identity.*
 import com.mavyy.localyuki.foundation.personality.*
 
 internal object ContinuitySchema {
-    const val VERSION = 2 // Physical schema, independent of ContinuityFormatVersion.
+    const val VERSION = 3 // Physical schema, independent of semantic formats.
     const val NAME = "continuity.db"
 
     fun create(db: SQLiteDatabase) {
@@ -24,6 +24,7 @@ internal object ContinuitySchema {
         db.execSQL("CREATE TABLE personality_facet (facet_id TEXT PRIMARY KEY NOT NULL, category TEXT NOT NULL UNIQUE, content TEXT NOT NULL)")
         db.execSQL("CREATE TABLE continuity_migration_history (migration_id TEXT PRIMARY KEY NOT NULL, from_version INTEGER NOT NULL, to_version INTEGER NOT NULL)")
         StateSchema.create(db)
+        MemorySchema.create(db)
     }
 }
 
@@ -62,6 +63,10 @@ internal class ContinuityMigrations(private val steps: List<ContinuityMigration>
 
 internal class ContinuityHelper(context: Context, private val newInstall: Boolean) :
     SQLiteOpenHelper(context, ContinuitySchema.NAME, null, ContinuitySchema.VERSION) {
+    override fun onConfigure(db: SQLiteDatabase) {
+        super.onConfigure(db)
+        db.setForeignKeyConstraintsEnabled(true)
+    }
     override fun onCreate(db: SQLiteDatabase) {
         // A preexisting version-zero or damaged file is not an install.
         check(newInstall) { "Existing continuity has no valid schema" }
@@ -83,7 +88,7 @@ internal class ContinuityHelper(context: Context, private val newInstall: Boolea
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        ContinuityMigrations(listOf(StateSchema.Migration)).apply(db, oldVersion, newVersion)
+        ContinuityMigrations(listOf(StateSchema.Migration, MemorySchema.Migration)).apply(db, oldVersion, newVersion)
     }
 
     override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {

@@ -12,12 +12,14 @@ import com.mavyy.localyuki.foundation.cognition.CognitiveIdentityReader
 import com.mavyy.localyuki.state.YukiStateStore
 import com.mavyy.localyuki.state.deviceTemporalGrounding
 import com.mavyy.localyuki.foundation.contracts.FoundationResult
+import com.mavyy.localyuki.memory.MemoryStore
 
 /** Static bootstrap surface. No cognitive or device-capability behavior. */
 class BootstrapActivity : Activity() {
     private lateinit var continuityStore: ContinuityStore
     private lateinit var continuityReader: CognitiveIdentityReader
     private lateinit var stateStore: YukiStateStore
+    private lateinit var memoryStore: MemoryStore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,6 +30,8 @@ class BootstrapActivity : Activity() {
         val temporal = deviceTemporalGrounding()
         stateStore = YukiStateStore(applicationContext, temporal)
         val state = stateStore.open()
+        memoryStore = MemoryStore(applicationContext, temporal)
+        val memory = memoryStore.open()
         val time = temporal.ground()
         setContentView(TextView(this).apply {
             val status = when (continuity.status) {
@@ -41,7 +45,7 @@ class BootstrapActivity : Activity() {
                     val timeText = if (time is FoundationResult.Success)
                         "\nTemporal: grounded\nLocal date: ${time.value.localDate}\nTimezone: ${time.value.zoneId.id}"
                         else "\nTemporal: unavailable"
-                    "\nContinuity: $status\nYuki State: $stateStatus$timeText"
+                    "\nContinuity: $status\nYuki State: $stateStatus\nMemory: ${memory.name.lowercase()}$timeText"
                 } else ""
             textSize = 20f
             gravity = Gravity.CENTER
@@ -49,6 +53,7 @@ class BootstrapActivity : Activity() {
     }
 
     override fun onDestroy() {
+        memoryStore.close()
         stateStore.close()
         continuityStore.close()
         super.onDestroy()
