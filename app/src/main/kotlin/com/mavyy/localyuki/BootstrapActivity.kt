@@ -13,6 +13,8 @@ import com.mavyy.localyuki.state.YukiStateStore
 import com.mavyy.localyuki.state.deviceTemporalGrounding
 import com.mavyy.localyuki.foundation.contracts.FoundationResult
 import com.mavyy.localyuki.memory.MemoryStore
+import com.mavyy.localyuki.memory.LivingMemoryStore
+import com.mavyy.localyuki.memory.DeterministicLexicalRecallEngine
 
 /** Static bootstrap surface. No cognitive or device-capability behavior. */
 class BootstrapActivity : Activity() {
@@ -20,6 +22,7 @@ class BootstrapActivity : Activity() {
     private lateinit var continuityReader: CognitiveIdentityReader
     private lateinit var stateStore: YukiStateStore
     private lateinit var memoryStore: MemoryStore
+    private lateinit var livingStore: LivingMemoryStore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +35,13 @@ class BootstrapActivity : Activity() {
         val state = stateStore.open()
         memoryStore = MemoryStore(applicationContext, temporal)
         val memory = memoryStore.open()
+        livingStore = LivingMemoryStore(applicationContext, temporal, memoryStore.reader())
+        val living = livingStore.open()
+        val lexicalReady = if (living != LivingMemoryStore.Start.UNAVAILABLE) {
+            DeterministicLexicalRecallEngine(applicationContext, memoryStore.reader(), livingStore.reader()).use {
+                it.propose(com.mavyy.localyuki.foundation.memory.RecallQuery("bootstrap",1)) is FoundationResult.Success
+            }
+        } else false
         val time = temporal.ground()
         setContentView(TextView(this).apply {
             val status = when (continuity.status) {
@@ -45,7 +55,8 @@ class BootstrapActivity : Activity() {
                     val timeText = if (time is FoundationResult.Success)
                         "\nTemporal: grounded\nLocal date: ${time.value.localDate}\nTimezone: ${time.value.zoneId.id}"
                         else "\nTemporal: unavailable"
-                    "\nContinuity: $status\nYuki State: $stateStatus\nMemory: ${memory.name.lowercase()}$timeText"
+                    "\nContinuity: $status\nYuki State: $stateStatus\nMemory: ${memory.name.lowercase()}" +
+                        "\nLiving Memory: ${living.name.lowercase()}\nSemantic Recall: ${if (lexicalReady) "lexical-ready" else "unavailable"}$timeText"
                 } else ""
             textSize = 20f
             gravity = Gravity.CENTER
@@ -53,6 +64,7 @@ class BootstrapActivity : Activity() {
     }
 
     override fun onDestroy() {
+        livingStore.close()
         memoryStore.close()
         stateStore.close()
         continuityStore.close()

@@ -18,7 +18,7 @@ import java.time.*
 @RunWith(RobolectricTestRunner::class) @Config(sdk = [35])
 class YukiStateStoreTest {
     private fun removeMemorySchema(db: SQLiteDatabase) {
-        listOf("memory_checkpoint", "memory_audit", "memory_provenance", "memory_revision",
+        listOf("living_recall_event","living_memory_term","living_memory_state","living_memory_metadata","memory_checkpoint", "memory_audit", "memory_provenance", "memory_revision",
             "durable_memory", "memory_evidence", "memory_thread", "memory_metadata").forEach { db.execSQL("DROP TABLE $it") }
     }
     private lateinit var context: Context
@@ -148,11 +148,12 @@ class YukiStateStoreTest {
         ContinuityStore(context).use { assertEquals(expected, it.open().reader.read()) }
         YukiStateStore(context, temporal).use { assertEquals(YukiStateStore.Start.INITIALIZED, it.open().status) }
         db().use { db ->
-            assertEquals(3, db.version)
+            assertEquals(4, db.version)
             db.rawQuery("SELECT migration_id FROM continuity_migration_history ORDER BY migration_id", null).use { c ->
-                assertEquals(2, c.count)
+                assertEquals(3, c.count)
                 c.moveToFirst(); assertEquals("2026-09-24-memory-authority-v1", c.getString(0))
                 c.moveToNext(); assertEquals("2026-09-24-yuki-state-v1", c.getString(0))
+                c.moveToNext(); assertEquals("2026-09-25-living-memory-v1", c.getString(0))
             }
         }
     }
