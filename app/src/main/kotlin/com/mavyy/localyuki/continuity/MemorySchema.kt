@@ -22,6 +22,7 @@ internal object MemorySchema {
         db.execSQL("CREATE INDEX idx_memory_current ON durable_memory(memory_id,current_revision)")
         db.execSQL("CREATE TABLE memory_checkpoint (checkpoint_id TEXT PRIMARY KEY NOT NULL, thread_id TEXT NOT NULL REFERENCES memory_thread(thread_id), start_sequence INTEGER NOT NULL CHECK(start_sequence>0), end_sequence INTEGER NOT NULL CHECK(end_sequence>=start_sequence), content TEXT NOT NULL, created_at TEXT NOT NULL, producer TEXT NOT NULL, supersedes TEXT REFERENCES memory_checkpoint(checkpoint_id) UNIQUE)")
         db.execSQL("CREATE INDEX idx_checkpoint_thread_time ON memory_checkpoint(thread_id,created_at,checkpoint_id)")
+        db.execSQL("CREATE INDEX idx_checkpoint_thread_id ON memory_checkpoint(thread_id,checkpoint_id)")
         for (table in listOf("memory_evidence", "memory_revision", "memory_provenance", "memory_audit")) {
             db.execSQL("CREATE TRIGGER immutable_${table}_update BEFORE UPDATE ON $table BEGIN SELECT RAISE(ABORT,'immutable'); END")
             db.execSQL("CREATE TRIGGER immutable_${table}_delete BEFORE DELETE ON $table BEGIN SELECT RAISE(ABORT,'immutable'); END")
