@@ -1,18 +1,19 @@
 # Local Yuki — Current State
 
-**Status:** Phase 3 certified baseline established  
-**Last doc-sync date:** 2026-09-24  
+**Status:** Phase 4 certified baseline established  
+**Last doc-sync date:** 2026-09-25  
 **Current strategy:** Brain-first / model-neutral  
 **Model Freeze Gate:** CLOSED  
-**Active phase:** Phase 4 — Memory authority and provenance completion  
-**Certified Phase 3 implementation:** `9d3cd57fec9e3c128b449152167ccdadca9f0e9d`  
-**Certified Android CI:** Local Yuki Android build and unit tests — Run #16 (`36087120725`) — PASS  
-**Mio Phase 3 verdict:** PASS  
-**Mavyy Phase 3 phone acceptance:** PASS  
-**Current signed CI APK:** versionName `0.1.1`; versionCode `16` for Run #16 (CI run-number injection; source fallback is `2`)  
-**Database/schema:** app-private SQLite `continuity.db`, physical schema version `2`  
+**Active phase:** Phase 5 — Living memory and semantic-recall socket  
+**Certified Phase 4 implementation:** `12f8654c4809a1bb1a94cb1e0bda7ebd6d00dc21`  
+**Certified Android CI:** Local Yuki Android build and unit tests — Run #22 (`36098219804`) — PASS  
+**Mio Phase 4 verdict:** PASS  
+**Mavyy Phase 4 phone acceptance:** PASS  
+**Current signed CI APK:** versionName `0.1.1`; versionCode `22` for Run #22 (CI run-number injection; source fallback is `2`)  
+**Database/schema:** app-private SQLite `continuity.db`, physical schema version `3`  
 **Semantic continuity format:** `ContinuityFormatVersion(1)`  
 **Yuki State semantic version:** `YukiStateVersion(1)`  
+**Memory semantic version:** `MemoryFormatVersion(1)`  
 **Fixed debug/update signing lineage:** ESTABLISHED  
 **Production release signing lineage:** NOT ESTABLISHED
 
@@ -28,181 +29,188 @@ Phase 2A established canonical app-owned identity, Personality Capsule v1, manda
 
 Phase 2B established durable app-owned identity/personality continuity, explicit physical schema/migrations, first-install bootstrap, process-death restoration, and fixed update signing.
 
-Phase 3 now establishes deterministic app-owned Yuki State and Temporal Grounding while preserving all earlier continuity and authority boundaries.
+Phase 3 established deterministic app-owned Yuki State and Temporal Grounding.
 
-Certified Phase 3 implementation:
+Phase 4 establishes deterministic app-owned memory history and evidence provenance foundations without neural retrieval.
 
-`9d3cd57fec9e3c128b449152167ccdadca9f0e9d`
+Certified Phase 4 implementation:
 
-Mio independently audited this exact candidate and issued PASS.
+`12f8654c4809a1bb1a94cb1e0bda7ebd6d00dc21`
 
-## 2. Phase 3 certification evidence
+Mio independently audited the final corrected candidate and issued PASS.
+
+Mavyy completed the required real-phone acceptance and reported PASS.
+
+## 2. Phase 4 certification evidence
 
 - Workflow: `Local Yuki Android build and unit tests`
-- Run: #16
-- Run ID: `36087120725`
-- Tested candidate: `9d3cd57fec9e3c128b449152167ccdadca9f0e9d`
+- Run: #22
+- Run ID: `36098219804`
+- Tested candidate: `12f8654c4809a1bb1a94cb1e0bda7ebd6d00dc21`
 - Result: PASS
 - Fixed signing-key restoration: PASS
 - Foundation boundary + unit tests + Android build: PASS
 - APK signing-certificate verification: PASS
 - Debug APK upload: PASS
-- Artifact: `local-yuki-debug-9d3cd57fec9e3c128b449152167ccdadca9f0e9d`
+- Artifact: `local-yuki-debug-12f8654c4809a1bb1a94cb1e0bda7ebd6d00dc21`
+- Artifact ID: `10848910289`
 
 The fixed signing certificate SHA-256 remains:
 
 `14:19:2D:22:5B:5D:ED:98:88:9E:3C:0B:D3:F7:04:D9:4C:1D:90:B9:31:BA:89:AB:0A:22:F4:8A:C9:6C:DD:2F`
 
-No signing workflow or certificate change was introduced by Phase 3.
+No signing workflow or certificate change was introduced by Phase 4.
 
 ## 3. Real-phone acceptance
 
-Mavyy completed Phase 3 acceptance on the fixed-signed update without clearing app data.
+Mavyy completed the required Phase 4 real-phone acceptance on the final fixed-signed candidate and reported PASS.
 
-Verified on the real phone:
-
-- existing identity continuity restored,
-- Yuki State restored after force-stop/relaunch,
-- Temporal Grounding reported grounded,
-- local date matched the phone,
-- timezone matched the phone,
-- timezone-change/reopen acceptance passed and the preferred timezone was restored.
-
-Observed post-restart acceptance surface included:
-
-```text
-Local Yuki
-Foundation setup in progress
-Continuity: restored
-Yuki State: restored
-Temporal: grounded
-Local date: 2026-09-24
-Timezone: America/Chicago
-```
+Phase 4's device-visible bootstrap addition is the high-level Memory lifecycle status. Existing app data must remain preserved during acceptance so the real `continuity.db` migration path is exercised rather than hidden by uninstall/reinstall.
 
 Result: **PHONE ACCEPTED**.
 
 ## 4. Physical schema and migration
 
-Phase 3 advances `continuity.db` from physical schema version `1` to `2`.
+Phase 4 advances `continuity.db` from physical schema version `2` to `3`.
 
 Explicit adjacent migration:
 
-`2026-09-24-yuki-state-v1`
+`2026-09-24-memory-authority-v1`
 
-Schema v2 adds:
+The registered upgrade chain remains deterministic:
 
-- `yuki_state`
-- `state_intention`
-- `state_topic`
-- `state_interaction`
+- v1 → v2: `2026-09-24-yuki-state-v1`
+- v2 → v3: `2026-09-24-memory-authority-v1`
 
-The migration validates existing v1 identity continuity before creating Phase 3 state structures.
+Fresh v3 creation initializes the current schema directly. Upgrades remain explicit, transactional, fail-closed, and non-destructive.
 
-Certified Phase 2B identity/personality tables and semantics remain intact.
+Phase 4 adds:
 
-No destructive drop-and-recreate fallback was introduced.
+- `memory_metadata`
+- `memory_thread`
+- `memory_evidence`
+- `durable_memory`
+- `memory_revision`
+- `memory_provenance`
+- `memory_audit`
+- `memory_checkpoint`
 
-## 5. Yuki State authority
+The certified Phase 2 identity/personality records and Phase 3 Yuki State/Temporal Grounding data remain preserved.
 
-The Phase 1B authority graph remains unchanged:
+## 5. Memory authority
 
-- `YUKI_STATE` → `CoreSubsystemId.YUKI_STATE`
-- `TEMPORAL_GROUNDING` → `CoreSubsystemId.TEMPORAL_GROUNDING`
+The Phase 1B authority graph remains authoritative:
 
-Yuki State semantic version is `1`.
+- `MEMORY_HISTORY` → `CoreSubsystemId.MEMORY_ENGINE`
+- `EVIDENCE_PROVENANCE` → `CoreSubsystemId.MEMORY_ENGINE`
+- `SEMANTIC_RECALL` remains advisory.
 
-Bounded current state supports:
+Memory semantic version is `1`.
 
-- one current project,
-- one current focus,
-- pending intentions,
-- unresolved topics,
-- latest user-input interaction marker,
-- latest Yuki-output interaction marker,
-- monotonic revision,
-- durable updated timestamp.
+Phase 4 establishes bounded model-neutral contracts for factual memory, autobiographical memory, immutable raw evidence, conversation-thread ownership, durable memory revisions, current versus historical status, explicit provenance, immutable audit records, owner Update, owner Restore, derived conversation checkpoints, and deterministic bounded retrieval.
 
-Current state is not factual/autobiographical memory.
+The Memory Engine is app-owned authority. A future model may propose memory content through proposal contracts but cannot directly mutate authoritative storage.
 
-Current project has **no Phase 3 TTL** and persists until explicitly replaced or cleared.
+## 6. Raw evidence and provenance
 
-Focus may have explicit expiry.
+Raw evidence persists an opaque evidence ID, source kind, optional owning thread, deterministic per-thread sequence, trusted captured instant, captured timezone, payload version, exact bounded payload, and a canonical SHA-256 integrity digest.
 
-Intentions and unresolved topics may have optional explicit expiry.
+`USER_INPUT` and `YUKI_OUTPUT` evidence require thread ownership.
 
-Focus expiry does not remove/change the project.
+Trusted timestamps come from Temporal Grounding; callers do not supply authoritative wall-clock values.
 
-Expired focus/items are reconciled deterministically on state access; no background worker is required.
+Evidence rows are append-only. SQLite triggers reject UPDATE and DELETE of committed evidence.
 
-## 6. Bounds and conflicts
+Digest mismatch or malformed stored evidence fails closed as a conflict; the Memory Engine does not silently rewrite corrupted evidence.
 
-Certified finite limits:
+Durable memory revisions require non-empty bounded evidence provenance.
 
-- maximum intentions: `32`
-- maximum unresolved topics: `32`
-- stable ID length: `80`
-- item text length: `512`
-- focus length: `240`
-- project label length: `160`
+## 7. Threads and identity continuity
 
-Invalid input is rejected rather than truncated.
+A memory thread has a stable thread ID plus immutable self and primary-relationship ownership anchors copied from the existing durable identity authority at creation time.
 
-Mutations use expected revisions. Stale revisions fail with `FailureCategory.CONFLICT`; there is no silent last-write-wins behavior.
+Creating a new thread does not create a new Yuki identity or relationship.
 
-Successful semantic mutation increments revision. Revision, not wall-clock order, is authoritative for state mutation ordering.
+Thread rows are immutable after creation.
 
-## 7. Interaction timestamp truth
+Identity and relationship truth remain owned by the existing continuity authority, not by memory records.
 
-Trusted app interaction plumbing records only `USER_INPUT` and `YUKI_OUTPUT`.
+## 8. Durable memory and revision history
 
-The owning state implementation obtains authoritative event time from Temporal Grounding.
+Durable memory kinds are `FACTUAL` and `AUTOBIOGRAPHICAL`.
 
-State commands do not carry authoritative clock values.
+Committed interpretations are represented as immutable revisions with monotonic revision numbers and explicit provenance.
 
-Interaction markers persist:
+The current memory head is explicit. Historical revisions remain durable and are not rewritten when the current head changes.
 
-- grounded instant,
-- observed timezone ID,
-- revision.
+SQLite guards allow the current head to advance only to the valid next revision in the same linear chain.
 
-A future advisory/model proposal cannot manufacture authoritative interaction history merely by supplying a timestamp.
+Stale expected revisions fail with `FailureCategory.CONFLICT`; Phase 4 does not use silent last-write-wins behavior.
 
-## 8. Temporal Grounding
+## 9. Owner Update and Restore
 
-Temporal Grounding remains pure/model-neutral in `foundation-contracts` with injected clock and timezone sources.
+Owner Update requires a current expected revision, new bounded content, and trusted owner evidence backed by threaded `USER_INPUT`.
 
-The Android production path samples device time and `ZoneId.systemDefault()` on demand.
+A successful owner update appends a new immutable revision, records provenance and audit history, then atomically advances the current head.
 
-Timezone is not permanently cached at process startup.
+Owner Restore does not rewind or delete history. Restoring a historical revision appends a new revision containing that historical content, records `restored_from`, supersedes the former current head, preserves the old chain, and appends provenance/audit history.
 
-Normalized calendar queries support:
+Owner mutation functions remain trusted app-facing operations. Advisory proposal contracts have no mutation route.
 
-- today,
-- yesterday,
-- tomorrow,
-- explicit date windows,
-- explicit week windows with caller-supplied first day of week.
+## 10. Audit and command identity
 
-Windows use local calendar boundaries with start-inclusive/end-exclusive semantics rather than blind 24-hour subtraction, preserving DST-short and DST-long days.
+Memory creation, update, owner update, and owner restore produce durable audit records.
 
-No natural-language temporal parser or GPS/location dependency is part of Phase 3.
+Committed audit rows are immutable.
 
-## 9. Restart reconstruction
+Repeated command IDs with an identical fingerprint resolve to the established result; reuse of the same command ID for different content conflicts.
 
-A new `YukiStateStore` reopens app-private durable storage and reconstructs current state.
+Failed writes do not become authoritative audit history.
 
-No process-static state cache is required.
+## 11. Conversation checkpoints
 
-State lifecycle distinguishes:
+Conversation checkpoints are bounded derived projections over an existing contiguous evidence sequence range.
 
-- `INITIALIZED`
-- `RESTORED`
-- `UNAVAILABLE`
+A checkpoint is **not raw evidence** and cannot be resolved as an `EvidenceRef`.
 
-Phase 2B identity restoration remains independently validated.
+Checkpoint creation never deletes or compacts away underlying evidence.
 
-## 10. Android/build state
+## 12. Deterministic indexed retrieval
+
+Phase 4 exposes bounded read-only `MemoryReader` contracts for thread lookup, exact evidence lookup, ordered thread evidence, current memory, paginated current memories, revision history, revision provenance, memory audit history, latest checkpoint, and checkpoint history.
+
+Page size is bounded to `100`.
+
+Core range paths are backed by explicit indexes, including:
+
+- `idx_evidence_thread_sequence`
+- `idx_revision_memory_number`
+- `idx_provenance_evidence`
+- `idx_audit_memory_time`
+- `idx_checkpoint_thread_time`
+- `idx_checkpoint_thread_id`
+
+The final Phase 4 correction added `idx_checkpoint_thread_id` for the exact keyset query:
+
+`WHERE thread_id=? AND checkpoint_id>? ORDER BY checkpoint_id LIMIT ?`
+
+The regression suite verifies that this path uses the index without a temporary sort and that checkpoint pages do not skip or duplicate records.
+
+There are no embeddings, vectors, semantic rerankers, model-authored SQL queries, or neural retrieval paths in Phase 4.
+
+## 13. Restart reconstruction and failure isolation
+
+`MemoryStore` reconstructs from app-private durable storage and exposes `INITIALIZED`, `RESTORED`, or `UNAVAILABLE`.
+
+No process-static memory cache is authoritative.
+
+Memory metadata corruption fails the Memory Engine closed without silently reinitializing it.
+
+Memory corruption does not rewrite valid identity/personality or Yuki State authority.
+
+Temporal Grounding unavailability prevents new trusted-timestamp writes, while already persisted exact reads remain independent of the current clock.
+
+## 14. Android/build state
 
 Dependency direction remains:
 
@@ -214,33 +222,33 @@ foundation-contracts
  └── pure Kotlin/JVM
 ```
 
-The Android manifest still declares no permissions.
+The Android manifest remains permission-free.
 
-Phase 3 adds no worker, service, receiver, background cognition, neural model/runtime, embedding model, tokenizer, prompt format, or network dependency.
+Phase 4 adds no worker, service, receiver, background cognition, model runtime, embedding dependency, tokenizer, prompt format, or network dependency.
 
 Fixed update signing remains unchanged.
 
-## 11. Model freeze
+## 15. Model freeze
 
 The Model Freeze Gate remains **CLOSED**.
 
 No candidate neural model is authorized.
 
-Foundation Phases 4–11 remain ahead of the neural-integration gate.
+Foundation Phases 5–11 remain ahead of the neural-integration gate.
 
-## 12. Current next action
+## 16. Current next action
 
 Proceed to architectural design for:
 
-**Phase 4 — Memory authority and provenance completion**
+**Phase 5 — Living memory and semantic-recall socket**
 
-Phase 4 implementation is **not authorized by this documentation sync alone**.
+Phase 5 implementation is **not authorized by this documentation sync alone**.
 
-Before implementation, Yuki must perform a fresh live-repository reset and issue a bounded Phase 4 architecture handoff.
+Before implementation, Yuki must perform a fresh live-repository reset and issue a bounded Phase 5 architecture handoff.
 
-Phase 4 is responsible for deterministic memory/evidence authority and provenance completion without semantic neural retrieval.
+Phase 5 must build on Phase 4's app-owned evidence/history authority without transferring truth ownership to learned retrieval.
 
-## 13. Certification rule
+## 17. Certification rule
 
 A future slice becomes synchronized only after Akari completes the bounded implementation and handoff, Mio independently issues PASS, exact-candidate CI is green, Mavyy completes required phone acceptance where applicable, and Yuki performs documentation sync.
 

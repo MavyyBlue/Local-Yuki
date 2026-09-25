@@ -12,8 +12,8 @@ Status legend: `NOT STARTED` / `ACTIVE` / `CANDIDATE` / `MIO PASS` / `PHONE ACCE
 | 1 | Core authority graph + subsystem interfaces | CERTIFIED |
 | 2 | Identity + Personality Capsule + substrate boundary | CERTIFIED |
 | 3 | Yuki State + Temporal Grounding | CERTIFIED |
-| 4 | Memory authority + provenance completion | ACTIVE |
-| 5 | Living memory + semantic-recall socket | NOT STARTED |
+| 4 | Memory authority + provenance completion | CERTIFIED |
+| 5 | Living memory + semantic-recall socket | ACTIVE |
 | 6 | Affective / Reward scaffolding | NOT STARTED |
 | 7 | Embodied Capability Registry + Executive Action Control | NOT STARTED |
 | 8 | Resource Governor + physical-body model | NOT STARTED |
@@ -55,40 +55,47 @@ Mavyy Phase 2B phone acceptance: **PASS**.
 
 ### Phase 3 certification
 
-Certified implementation:
-
-`9d3cd57fec9e3c128b449152167ccdadca9f0e9d`
-
-Certified Android CI:
-
-Run #16 (`36087120725`) — PASS
-
-Mio independent Phase 3 verdict: **PASS**
-
+Certified implementation: `9d3cd57fec9e3c128b449152167ccdadca9f0e9d`  
+Certified Android CI: Run #16 (`36087120725`) — PASS  
+Mio Phase 3 verdict: **PASS**  
 Mavyy Phase 3 phone acceptance: **PASS**
 
-Phase 3 establishes:
+Phase 3 established physical schema `2`, Yuki State semantic version `1`, bounded current state, trusted interaction timestamps, deterministic expiry/conflicts, Temporal Grounding, DST-safe calendar windows, restart restoration, fixed signing, and no model/runtime coupling.
 
-- physical continuity schema `2` via explicit migration `2026-09-24-yuki-state-v1`,
-- Yuki State semantic version `1`,
-- bounded current project/focus,
-- bounded pending intentions and unresolved topics,
-- trusted user/Yuki interaction markers,
-- deterministic expiry reconciliation,
-- expected-revision conflict handling,
-- deterministic device clock/timezone grounding,
-- today/yesterday/tomorrow/date/week calendar windows,
-- DST-safe local day boundaries,
-- restart restoration,
+### Phase 4 certification
+
+Certified implementation: `12f8654c4809a1bb1a94cb1e0bda7ebd6d00dc21`  
+Certified Android CI: Run #22 (`36098219804`) — PASS  
+Mio Phase 4 verdict: **PASS**  
+Mavyy Phase 4 phone acceptance: **PASS**
+
+Phase 4 establishes:
+
+- physical continuity schema `3` via explicit migration `2026-09-24-memory-authority-v1`,
+- Memory semantic version `1`,
+- immutable thread ownership anchored to durable identity,
+- immutable raw evidence with deterministic per-thread sequence,
+- trusted Temporal Grounding timestamps and captured timezone,
+- versioned SHA-256 evidence-integrity digests,
+- factual and autobiographical durable memory,
+- immutable revision chains with explicit current/historical state,
+- evidence provenance for committed revisions,
+- owner Update and append-only Restore semantics,
+- immutable command/audit history,
+- bounded derived conversation checkpoints,
+- deterministic bounded exact/indexed retrieval,
+- corrected keyset pagination for checkpoint history using `idx_checkpoint_thread_id`,
+- restart restoration and fail-closed corruption isolation,
+- read-only cognition-facing memory access and non-executable proposal boundaries,
 - preservation of fixed signing and permission-free Android state.
 
-Current project has no Phase 3 TTL and persists until explicitly replaced/cleared. Focus and individual intentions/topics may expire independently.
+The earlier Phase 4 candidate `68fdb66aa90462739b208e6c3eae4733d0347471` was not certified because Mio identified a checkpoint pagination/index mismatch. The final candidate `12f8654c4809a1bb1a94cb1e0bda7ebd6d00dc21` added the matching `(thread_id, checkpoint_id)` index plus exact query-plan and no-skip/no-duplicate pagination coverage.
 
 ### Foundation certification gate
 
 The Model Freeze Gate may open only after Phases 0–11 are implemented to the required maturity and certified.
 
-Phase 4 is now active, but implementation requires a fresh Yuki architecture handoff.
+Phase 5 is now active, but implementation requires a fresh Yuki architecture handoff.
 
 ## Neural integration — only after foundation certification
 
@@ -108,6 +115,6 @@ Phase 4 is now active, but implementation requires a fresh Yuki architecture han
 
 ## Current next milestone
 
-Perform a fresh live-repository reset and design the bounded Phase 4 — Memory authority and provenance completion — architecture slice.
+Perform a fresh live-repository reset and design the bounded Phase 5 — Living memory and semantic-recall socket — architecture slice.
 
 No candidate neural-model download or integration is authorized.

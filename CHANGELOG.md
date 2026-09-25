@@ -2,6 +2,34 @@
 
 Only synchronized/certified project changes belong here. Candidate work that has not passed the required gates should remain in handoffs or active-slice notes.
 
+## 2026-09-25 — Phase 4 certified: Memory authority and provenance completion
+
+- Certified final Phase 4 implementation `12f8654c4809a1bb1a94cb1e0bda7ebd6d00dc21`.
+- Android CI Run #22 (`36098219804`) passed against the exact final candidate.
+- Mio independently re-audited the corrected candidate and issued PASS.
+- Mavyy completed the required real-phone acceptance and reported PASS.
+- Advanced app-private `continuity.db` from physical schema version `2` to `3`.
+- Added explicit adjacent migration `2026-09-24-memory-authority-v1`; existing identity/personality and Yuki State data remain preserved.
+- Added app-owned `MemoryFormatVersion(1)`.
+- Added durable `memory_metadata`, `memory_thread`, `memory_evidence`, `durable_memory`, `memory_revision`, `memory_provenance`, `memory_audit`, and `memory_checkpoint` storage.
+- Added immutable conversation-thread ownership anchored to existing durable self and primary-relationship identity records.
+- Added immutable raw evidence with source kind, optional thread ownership, deterministic per-thread sequence, trusted Temporal Grounding timestamp/timezone, bounded exact payload, payload version, and canonical SHA-256 integrity digest.
+- Added fail-closed evidence-integrity checks and SQLite immutability guards; committed raw evidence is not silently rewritten or deleted.
+- Added factual and autobiographical durable-memory kinds with immutable revision history, explicit current versus historical status, linear supersession, and expected-head conflict handling.
+- Added required evidence provenance for durable memory revisions.
+- Added owner Update semantics and append-only owner Restore semantics; restore creates a new revision rather than rewinding/deleting history.
+- Added immutable audit records with command identity/fingerprint and deterministic replay/conflict behavior.
+- Added bounded derived conversation checkpoints that retain underlying evidence independently and never masquerade as raw evidence.
+- Added bounded deterministic `MemoryReader` queries for threads, evidence, thread evidence, current memory, current-memory pages, revision history, provenance, audit, latest checkpoint, and checkpoint history.
+- Added explicit retrieval indexes for evidence sequence, revision order, provenance lookup, audit history, latest checkpoints, and checkpoint keyset pagination.
+- Corrected the final checkpoint-pagination path after Mio's audit of candidate `68fdb66aa90462739b208e6c3eae4733d0347471`: final candidate `12f8654c4809a1bb1a94cb1e0bda7ebd6d00dc21` adds `idx_checkpoint_thread_id(thread_id, checkpoint_id)`, an `EXPLAIN QUERY PLAN` assertion for the exact page query, and no-skip/no-duplicate pagination coverage.
+- Added restart reconstruction with `Memory: initialized/restored/unavailable` high-level bootstrap state.
+- Preserved app-owned truth boundaries: semantic recall remains advisory; cognition receives bounded read/proposal contracts and no SQLite/storage mutator surface.
+- Preserved Phase 2 identity/personality continuity, Phase 3 Yuki State/Temporal Grounding authority, substrate opacity, capability honesty, fixed signing lineage, and the permission-free Android manifest.
+- No worker, service, receiver, background cognition, embedding model, vector store, neural reranker, tokenizer, prompt format, neural runtime, or candidate model was added.
+- Model Freeze Gate remains CLOSED.
+- Advanced the active phase to Phase 5 — Living memory and semantic-recall socket. Phase 5 implementation requires a fresh bounded Yuki architecture handoff.
+
 ## 2026-09-24 — Phase 3 certified: Yuki State and Temporal Grounding
 
 - Certified Phase 3 implementation `9d3cd57fec9e3c128b449152167ccdadca9f0e9d`.
