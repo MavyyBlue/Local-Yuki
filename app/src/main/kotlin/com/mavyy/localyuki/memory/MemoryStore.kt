@@ -139,7 +139,7 @@ class MemoryStore(context: Context, private val temporal: TemporalGroundingReade
         val raw = RawEvidence(ref,r[2],seq,r[4].time(),try { ZoneId.of(r[5].required()) } catch (_: Exception) { throw Conflict() }, version,r[7].required())
         if (!MemoryBounds.text(raw.payload,MemoryBounds.MAX_EVIDENCE_BYTES) ||
             r[8] != digest(ref.opaqueId,r[1].required(),r[2],seq,r[4].required(),r[5].required(),version,raw.payload)) throw Conflict()
-        if (raw.threadId != null && thread(db,raw.threadId) == null) throw Conflict()
+        raw.threadId?.let { if (thread(db,it) == null) throw Conflict() }
         return raw
     }
     fun getEvidence(ref: EvidenceRef): FoundationResult<RawEvidence> = read { db ->
@@ -193,8 +193,8 @@ class MemoryStore(context: Context, private val temporal: TemporalGroundingReade
         val total = row(db,"SELECT COUNT(*) FROM memory_revision WHERE memory_id=?",id)?.get(0)?.number() ?: throw Conflict()
         if (max != current.number || total != max) throw Conflict()
         if (current.number == 1L && current.supersedes != null || current.number > 1L && current.supersedes == null) throw Conflict()
-        if (current.supersedes != null) {
-            val prev = revision(db,current.supersedes) ?: throw Conflict()
+        current.supersedes?.let { priorId ->
+            val prev = revision(db,priorId) ?: throw Conflict()
             if (prev.memoryId != id || prev.number != current.number-1) throw Conflict()
         }
         return DurableMemory(id,named<MemoryKind>(r[1]),r[2].time(),current)
