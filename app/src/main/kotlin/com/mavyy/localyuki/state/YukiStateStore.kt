@@ -46,8 +46,10 @@ class YukiStateStore(context: Context, private val temporal: TemporalGroundingRe
         val next = when (val change = command.change) {
             is StateChange.Project -> current.copy(project = change.value)
             is StateChange.Focus -> {
-                require(change.value?.expiresAt == null || change.value.expiresAt.isAfter(now))
-                current.copy(focus = change.value)
+                val focus = change.value
+                val expiry = focus?.expiresAt
+                require(expiry == null || expiry.isAfter(now))
+                current.copy(focus = focus)
             }
             is StateChange.PutIntention -> current.copy(intentions = put(current.intentions, change.id, change.text, change.expiresAt, now))
             is StateChange.RemoveIntention -> current.copy(intentions = remove(current.intentions, change.id))
