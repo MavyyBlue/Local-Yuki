@@ -11,8 +11,8 @@ Status legend: `NOT STARTED` / `ACTIVE` / `CANDIDATE` / `MIO PASS` / `PHONE ACCE
 | 0 | Live repo reset / baseline lock | CERTIFIED |
 | 1 | Core authority graph + subsystem interfaces | CERTIFIED |
 | 2 | Identity + Personality Capsule + substrate boundary | CERTIFIED |
-| 3 | Yuki State + Temporal Grounding | ACTIVE |
-| 4 | Memory authority + provenance completion | NOT STARTED |
+| 3 | Yuki State + Temporal Grounding | CERTIFIED |
+| 4 | Memory authority + provenance completion | ACTIVE |
 | 5 | Living memory + semantic-recall socket | NOT STARTED |
 | 6 | Affective / Reward scaffolding | NOT STARTED |
 | 7 | Embodied Capability Registry + Executive Action Control | NOT STARTED |
@@ -49,19 +49,46 @@ Phase 2B implementation CI: Run #10 (`36057542206`)
 Mio Phase 2B verdict: **PASS**
 
 Accepted fixed-signing/build follow-up: `c7e24687c4609736d6d34550a830c02b85e92fbd`  
-Latest accepted signed Android CI: Run #13 (`36076298126`) — PASS
+Accepted signed Android CI: Run #13 (`36076298126`) — PASS
 
-Mavyy Phase 2B phone acceptance: **PASS** — first launch `Continuity: initialized`; force-stop/relaunch `Continuity: restored`.
+Mavyy Phase 2B phone acceptance: **PASS**.
 
-Phase 2B establishes app-private SQLite continuity schema v1, deterministic bootstrap, explicit migration discipline, fail-closed malformed-store behavior, process-death restoration, and model-independent reconstruction while preserving the certified Phase 2A identity/personality/substrate boundary.
+### Phase 3 certification
 
-The signing follow-up between the Mio-passed semantic implementation and the accepted phone-test build changes only `.github/workflows/android-build.yml` and `app/build.gradle.kts`; Phase 2B continuity source/tests are unchanged.
+Certified implementation:
+
+`9d3cd57fec9e3c128b449152167ccdadca9f0e9d`
+
+Certified Android CI:
+
+Run #16 (`36087120725`) — PASS
+
+Mio independent Phase 3 verdict: **PASS**
+
+Mavyy Phase 3 phone acceptance: **PASS**
+
+Phase 3 establishes:
+
+- physical continuity schema `2` via explicit migration `2026-09-24-yuki-state-v1`,
+- Yuki State semantic version `1`,
+- bounded current project/focus,
+- bounded pending intentions and unresolved topics,
+- trusted user/Yuki interaction markers,
+- deterministic expiry reconciliation,
+- expected-revision conflict handling,
+- deterministic device clock/timezone grounding,
+- today/yesterday/tomorrow/date/week calendar windows,
+- DST-safe local day boundaries,
+- restart restoration,
+- preservation of fixed signing and permission-free Android state.
+
+Current project has no Phase 3 TTL and persists until explicitly replaced/cleared. Focus and individual intentions/topics may expire independently.
 
 ### Foundation certification gate
 
 The Model Freeze Gate may open only after Phases 0–11 are implemented to the required maturity and certified.
 
-Phase 3 is now active, but implementation requires a fresh Yuki architecture handoff.
+Phase 4 is now active, but implementation requires a fresh Yuki architecture handoff.
 
 ## Neural integration — only after foundation certification
 
@@ -81,6 +108,6 @@ Phase 3 is now active, but implementation requires a fresh Yuki architecture han
 
 ## Current next milestone
 
-Perform a fresh live-repository reset and design the bounded Phase 3 — Yuki State and Temporal Grounding — architecture slice.
+Perform a fresh live-repository reset and design the bounded Phase 4 — Memory authority and provenance completion — architecture slice.
 
 No candidate neural-model download or integration is authorized.

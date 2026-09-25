@@ -2,6 +2,28 @@
 
 Only synchronized/certified project changes belong here. Candidate work that has not passed the required gates should remain in handoffs or active-slice notes.
 
+## 2026-09-24 — Phase 3 certified: Yuki State and Temporal Grounding
+
+- Certified Phase 3 implementation `9d3cd57fec9e3c128b449152167ccdadca9f0e9d`.
+- Android CI Run #16 (`36087120725`) passed against the exact candidate.
+- Mio independently audited the exact candidate and issued PASS.
+- Mavyy completed real-phone acceptance, including update-with-data-preserved behavior, force-stop/relaunch restoration, Temporal Grounding, local date/timezone verification, and timezone-change/reopen acceptance.
+- Advanced app-private `continuity.db` from physical schema version `1` to `2`.
+- Added explicit adjacent migration `2026-09-24-yuki-state-v1` and preserved the certified Phase 2B identity/personality records.
+- Added `yuki_state`, `state_intention`, `state_topic`, and `state_interaction` tables.
+- Added app-owned Yuki State semantic version `1`.
+- Added bounded current project/focus, pending intentions, unresolved topics, interaction markers, monotonic revisions, and durable restart restoration.
+- Clarified certified Phase 3 expiry semantics: current project has no TTL and persists until explicitly replaced/cleared; focus and individual intentions/topics may expire independently.
+- Added expected-revision conflict behavior so stale state mutations fail rather than silently overwrite newer state.
+- Added trusted interaction timestamping through Temporal Grounding; state commands do not supply authoritative event timestamps.
+- Added deterministic model-neutral Temporal Grounding with injected clock/timezone sources.
+- Added normalized `today`, `yesterday`, `tomorrow`, explicit date, and explicit week windows using local calendar boundaries rather than blind 24-hour subtraction.
+- Added DST-safe temporal tests, timezone-change behavior, persistence/expiry/bounds/revision tests, and schema migration coverage.
+- Preserved Phase 1B authority ownership, Phase 2A/2B identity/personality continuity, substrate opacity, fixed signing lineage, and the permission-free Android manifest.
+- No worker, service, receiver, background cognition, neural model/runtime, tokenizer, prompt format, embedding dependency, or location permission was added.
+- Model Freeze Gate remains CLOSED.
+- Advanced the active phase to Phase 4 — Memory authority and provenance completion. Phase 4 implementation requires a fresh bounded Yuki architecture handoff.
+
 ## 2026-09-24 — Phase 2B certified: durable identity/personality continuity and fixed update signing
 
 - Certified the Phase 2B semantic implementation at `5d0699e3474b71ec245fc3b5365044395c855875`.
