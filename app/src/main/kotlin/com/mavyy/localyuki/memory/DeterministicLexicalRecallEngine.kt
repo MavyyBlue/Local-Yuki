@@ -27,8 +27,9 @@ class DeterministicLexicalRecallEngine(context: Context, private val deep: Memor
             if (!c.moveToFirst()) false else c.getInt(0)==1 && c.getInt(1)==1 && !c.moveToNext()
         }
         if (!meta) return FoundationResult.Failure(FailureCategory.CONFLICT)
-        for (term in terms) db.rawQuery(if (query.kind == null) TERM_QUERY else KIND_TERM_QUERY,
-            if (query.kind == null) arrayOf(term,MAX_TERM_MATCHES.toString()) else arrayOf(term,query.kind.name,MAX_TERM_MATCHES.toString())).use { c ->
+        val kind = query.kind
+        for (term in terms) db.rawQuery(if (kind == null) TERM_QUERY else KIND_TERM_QUERY,
+            if (kind == null) arrayOf(term,MAX_TERM_MATCHES.toString()) else arrayOf(term,kind.name,MAX_TERM_MATCHES.toString())).use { c ->
             while (c.moveToNext()) matches.getOrPut(c.getString(0) to c.getString(1)) { linkedSetOf() }.add(term)
         }
         FoundationResult.Success(matches.map { (key, found) ->
