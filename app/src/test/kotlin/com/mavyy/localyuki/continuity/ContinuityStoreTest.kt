@@ -45,7 +45,7 @@ class ContinuityStoreTest {
             assertEquals(expected, initial.reader.read())
         }
         database().use { db ->
-            assertEquals(1, db.version)
+            assertEquals(2, db.version)
             listOf("identity_anchor" to 1, "personality_capsule" to 1,
                 "continuity_honesty_rule" to 4, "personality_facet" to 9,
                 "continuity_migration_history" to 0).forEach { (table, count) ->
@@ -118,10 +118,10 @@ class ContinuityStoreTest {
 
     @Test fun schemaDowngradeIsRejectedWithoutDataLoss() {
         ContinuityStore(context).use { it.open() }
-        database().use { it.version = 2 }
+        database().use { it.version = 3 }
         assertConflict()
         database().use { db ->
-            assertEquals(2, db.version)
+            assertEquals(3, db.version)
             db.rawQuery("SELECT self_id FROM identity_anchor", null).use {
                 assertTrue(it.moveToFirst())
                 assertEquals("yuki-aster", it.getString(0))
@@ -130,7 +130,7 @@ class ContinuityStoreTest {
     }
 
     @Test fun missingMigrationPathAndInvalidRegistryAreRejected() {
-        assertThrows(IllegalArgumentException::class.java) { ContinuityMigrations().path(1, 2) }
+        assertThrows(IllegalArgumentException::class.java) { ContinuityMigrations().path(1, 3) }
         assertThrows(IllegalArgumentException::class.java) { ContinuityMigrations().path(0, 1) }
         assertThrows(IllegalArgumentException::class.java) { ContinuityMigrations().path(2, 1) }
     }
