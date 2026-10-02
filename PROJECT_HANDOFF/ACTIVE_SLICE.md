@@ -1,96 +1,39 @@
 # Local Yuki — Active Slice
 
-**Slice:** Phase 5 — Living memory and semantic-recall socket  
-**Architecture authority:** Mavyy + Yuki  
-**Implementation owner:** Akari after bounded Yuki authorization  
-**Independent QA authority:** Mio  
-**Certified Phase 4 implementation:** `12f8654c4809a1bb1a94cb1e0bda7ebd6d00dc21`  
-**Certified Android CI:** Run #22 (`36098219804`) — PASS  
-**Phase 4 Mio verdict:** PASS  
-**Phase 4 phone acceptance:** PASS  
-**Physical continuity schema:** `3`  
-**Continuity semantic format:** `1`  
-**Yuki State semantic version:** `1`  
-**Memory semantic version:** `1`  
-**Model Freeze Gate:** CLOSED  
-**Implementation authorization:** Owner-authorized Phase 5 completion, bounded by the [2026-10-02 architecture handoff](2026-10-02_PHASE_5_ARCHITECTURE_HANDOFF.md) after live-source reset
+**Authorization:** Mavyy requests continued implementation across phases, including
+later groundwork, with environment workarounds. The latest owner guidance defers
+real model choices and adapters to a deeper model-phase discussion.
 
-**Live candidate:** schema `4`, living-memory format `1`; certified baseline above remains schema `3`
+**Candidate:** sequential deterministic Phases 6–11, bounded admission/Vault and
+mock replacement/restore groundwork. Physical schema 8. Independent certification
+remains Phase 4; Phase 5 has exact-source CI #26 and owner phone PASS, Mio pending.
 
-**Status:** CANDIDATE — developer checks pass; independent QA, signed CI and phone acceptance pending
+Architecture: [continuation handoff](2026-10-02_CONTINUATION_ARCHITECTURE_HANDOFF.md).
+Implementation, verification, limits and acceptance:
+[implementation handoff](2026-10-02_CONTINUATION_IMPLEMENTATION_HANDOFF.md).
 
-## Purpose
+## Scope and authorities
 
-Finish and validate the live living-memory/semantic-recall candidate while preserving Phase 4's deterministic memory/evidence authority.
+Affect persists synthetic vectors and evidence-backed associations. Capabilities
+combine owner grants with actual platform/executor availability. Executive Control
+rechecks actions. Governor measures physical pressure and bounds work/residency.
+Recovery checkpoints intentions and safely handles interrupted maintenance.
+Scheduler processes bounded signals/cooldowns and optional coarse charging jobs.
+Workspace verifies grounded context and isolates replaceable advisory engines.
+Admission hashes owner models and chooses compatible resource-bounded adapters.
+Vault encrypts and validates continuity before replacing a closed database.
 
-Phase 5 may introduce deterministic lifecycle/scaffolding that prepares memory for later semantic access, but learned retrieval must remain advisory and must never become the source of autobiographical truth.
+Identity, raw evidence, revision history and signing remain app-owned. Advisory
+models cannot mutate them or grant capabilities. Unsupported organs remain
+unavailable. Language, speech, vision and decision models are not integrated.
 
-## Certified starting point
+## Remaining gates
 
-Phase 4 now provides:
+Local 81-test suite, boundary verification, debug build and lint pass.
+Signed exact-continuation CI, independent Mio review and owner phone checks remain
+pending. No developer self-certification. Foundation certification must precede
+real neural admission; the Model Freeze Gate stays CLOSED.
 
-- physical SQLite schema version `3`,
-- explicit v2 → v3 migration `2026-09-24-memory-authority-v1`,
-- app-owned `MemoryFormatVersion(1)`,
-- immutable conversation threads,
-- immutable raw evidence with provenance and integrity digests,
-- factual and autobiographical durable memory,
-- immutable revision chains,
-- explicit current/historical status,
-- owner Update and Restore semantics,
-- immutable audit history,
-- derived rolling-checkpoint contracts,
-- bounded deterministic exact/indexed reads,
-- corrected checkpoint keyset pagination with matching `(thread_id, checkpoint_id)` index,
-- restart reconstruction and corruption isolation,
-- trusted timestamp dependency on Temporal Grounding for new writes,
-- read-only cognition-facing memory contracts,
-- non-executable proposal boundaries,
-- fixed signing lineage,
-- no Android permission expansion,
-- no neural runtime/model.
-
-Phase 5 must build additively on this baseline.
-
-## Required architectural questions for the next Yuki handoff
-
-The 2026-10-02 architecture handoff answers these questions against live overlay `59eb7f8`:
-
-- what “living memory” means without allowing automatic truth rewriting,
-- what deterministic lifecycle metadata, if any, is authoritative,
-- how current versus historical memories participate,
-- how recency/importance/use signals are represented without becoming fabricated truth,
-- what the semantic-recall socket may read and return,
-- how advisory retrieval results retain provenance back to Phase 4 evidence/revisions,
-- how unavailable learned retrieval degrades cleanly to deterministic exact reads,
-- how memory consolidation/summary proposals remain proposals until accepted by authority,
-- persistence and migration requirements,
-- resource/lifecycle constraints,
-- corruption/conflict behavior,
-- restart reconstruction,
-- tests and phone acceptance.
-
-## Hard boundaries
-
-Phase 5 must not rewrite/delete Phase 4 raw evidence as a side effect of “living” memory, collapse historical revision chains, let semantic relevance become factual authority, let a model directly execute owner Update/Restore, let checkpoints masquerade as raw evidence, expose SQLite/storage/substrate internals to ordinary cognition, or weaken fixed signing, migration discipline, capability honesty, or prior authorities.
-
-## Neural/model boundary
-
-The Model Freeze Gate remains CLOSED.
-
-No candidate neural model, embedding model, reranker, tokenizer, LLM runtime, downloadable model asset, or model-specific prompt format is authorized by this active-slice transition.
-
-If Phase 5 requires a semantic-recall interface, the interface must be model-neutral and testable with deterministic/mocked implementations.
-
-## Exit gate
-
-Phase 5 exits only after:
-
-1. Yuki performs a fresh live-repository reset and issues the bounded Phase 5 architecture handoff.
-2. Akari implements only the authorized Phase 5 slice.
-3. Exact-candidate Android CI is green.
-4. Mio independently issues PASS.
-5. Mavyy completes required phone acceptance if the slice exposes device-visible/lifecycle behavior.
-6. Yuki performs Phase 5 documentation sync.
-
-The Model Freeze Gate remains CLOSED.
+Next: deliver the concrete import candidate, validate its signed upgrade on the
+Galaxy S26+, resolve independent review findings, then discuss model families,
+Android/RAM/runtime constraints and the local Laya Decisions Model.

@@ -42,8 +42,10 @@ Historical handoffs belong under `PROJECT_HANDOFF/HISTORY/`. They are evidence, 
 
 ## Current candidate work
 
-The live source overlay `59eb7f8` already contains Phase 5 implementation beyond
-the certified Phase 4 baseline. Mavyy's 2026-10-02 request authorizes its bounded
-completion. Read the [architecture handoff](2026-10-02_PHASE_5_ARCHITECTURE_HANDOFF.md)
-and [implementation handoff](2026-10-02_PHASE_5_IMPLEMENTATION_HANDOFF.md) for the
-candidate's behavior, developer evidence and pending independent/phone gates.
+Phase 5 source `57c6d17` has exact-source Android CI #26 and Mavyy's phone PASS;
+Mio review remains pending. The owner authorized sequential continuation beyond
+Phase 5. Read the [continuation architecture](2026-10-02_CONTINUATION_ARCHITECTURE_HANDOFF.md)
+and [implementation handoff](2026-10-02_CONTINUATION_IMPLEMENTATION_HANDOFF.md)
+for deterministic Phases 6–11, later groundwork, developer evidence and remaining
+independent/signed-CI/phone gates. Real model integration is deferred to the deeper
+model-phase discussion requested by the owner.

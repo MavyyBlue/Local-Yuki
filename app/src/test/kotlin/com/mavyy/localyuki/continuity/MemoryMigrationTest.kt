@@ -28,11 +28,13 @@ class MemoryMigrationTest {
     @After fun clean() { context.deleteDatabase(ContinuitySchema.NAME) }
     private fun db() = SQLiteDatabase.openDatabase(context.getDatabasePath(ContinuitySchema.NAME).path,null,SQLiteDatabase.OPEN_READWRITE)
     private fun dropMemory(sql: SQLiteDatabase) {
+        dropAfterPhaseFive(sql)
         listOf("living_recall_event","living_memory_term","living_memory_state","living_memory_metadata","memory_checkpoint","memory_audit","memory_provenance","memory_revision","durable_memory",
             "memory_evidence","memory_thread","memory_metadata").forEach { sql.execSQL("DROP TABLE $it") }
     }
     private fun scalar(sql: SQLiteDatabase, query: String): String? = sql.rawQuery(query,null).use { it.moveToFirst(); it.getString(0) }
     private fun dropLiving(sql: SQLiteDatabase) {
+        dropAfterPhaseFive(sql)
         listOf("living_coverage_insert","living_coverage_head").forEach { sql.execSQL("DROP TRIGGER $it") }
         listOf("living_recall_event","living_memory_term","living_memory_state","living_memory_metadata")
             .forEach { sql.execSQL("DROP TABLE $it") }
@@ -59,7 +61,7 @@ class MemoryMigrationTest {
             LivingMemoryStore(context,temporal,store.reader()).use { assertEquals(LivingMemoryStore.Start.INITIALIZED,it.open()) }
         }
         db().use { sql ->
-            assertEquals(4,sql.version)
+            assertEquals(8,sql.version)
             assertEquals("yuki-aster",scalar(sql,"SELECT self_id FROM identity_anchor"))
             assertEquals("9",scalar(sql,"SELECT count(*) FROM personality_facet"))
             assertEquals("1",scalar(sql,"SELECT count(*) FROM memory_thread"))
@@ -99,13 +101,13 @@ class MemoryMigrationTest {
         }
         MemoryStore(context,temporal).use { assertEquals(MemoryStore.Start.INITIALIZED,it.open()) }
         db().use { sql ->
-            assertEquals(4,sql.version)
+            assertEquals(8,sql.version)
             assertEquals("yuki-aster",scalar(sql,"SELECT self_id FROM identity_anchor"))
             assertEquals("phase3",scalar(sql,"SELECT project_id FROM yuki_state"))
             assertEquals("2",scalar(sql,"SELECT revision FROM yuki_state"))
             assertEquals("1",scalar(sql,"SELECT count(*) FROM state_interaction"))
             assertEquals("9",scalar(sql,"SELECT count(*) FROM personality_facet"))
-            assertEquals("2",scalar(sql,"SELECT count(*) FROM continuity_migration_history"))
+            assertEquals("6",scalar(sql,"SELECT count(*) FROM continuity_migration_history"))
             assertEquals(MemorySchema.MIGRATION_ID,scalar(sql,"SELECT migration_id FROM continuity_migration_history WHERE to_version=3"))
         }
     }

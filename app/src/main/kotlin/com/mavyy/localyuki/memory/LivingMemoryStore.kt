@@ -164,6 +164,16 @@ class LivingMemoryStore(context: Context, private val temporal: TemporalGroundin
             views
         }
     }
+    /** Trusted exact refresh for a newly committed memory; no startup or whole-store scan. */
+    internal fun reconcileOne(memoryId: String): FoundationResult<LivingMemoryView> {
+        if (!MemoryBounds.id(memoryId)) return FoundationResult.Failure(FailureCategory.INVALID_INPUT)
+        val memory=deep.current(memoryId)
+        if(memory !is FoundationResult.Success) return when(memory) {
+            is FoundationResult.Failure -> memory;is FoundationResult.Unavailable -> memory
+            else -> FoundationResult.Failure(FailureCategory.INTERNAL_FAILURE)
+        }
+        return timed { db,time -> reconcile(db,memory.value,time) }
+    }
     private fun reconcile(db: SQLiteDatabase, memory: DurableMemory, time: Instant): LivingMemoryView {
         val id = memory.id
         val head = rows(db,"SELECT current_revision FROM durable_memory WHERE memory_id=?",id).singleOrNull()?.get(0)

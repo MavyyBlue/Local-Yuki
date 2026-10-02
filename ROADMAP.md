@@ -14,12 +14,12 @@ Status legend: `NOT STARTED` / `ACTIVE` / `CANDIDATE` / `MIO PASS` / `PHONE ACCE
 | 3 | Yuki State + Temporal Grounding | CERTIFIED |
 | 4 | Memory authority + provenance completion | CERTIFIED |
 | 5 | Living memory + semantic-recall socket | CANDIDATE |
-| 6 | Affective / Reward scaffolding | NOT STARTED |
-| 7 | Embodied Capability Registry + Executive Action Control | NOT STARTED |
-| 8 | Resource Governor + physical-body model | NOT STARTED |
-| 9 | Sleep / Recovery + maintenance lifecycle | NOT STARTED |
-| 10 | Low-power background nervous system | NOT STARTED |
-| 11 | Cognitive Workspace + Reality Verification + neural sockets | NOT STARTED |
+| 6 | Affective / Reward scaffolding | CANDIDATE |
+| 7 | Embodied Capability Registry + Executive Action Control | CANDIDATE |
+| 8 | Resource Governor + physical-body model | CANDIDATE |
+| 9 | Sleep / Recovery + maintenance lifecycle | CANDIDATE |
+| 10 | Low-power background nervous system | CANDIDATE |
+| 11 | Cognitive Workspace + Reality Verification + neural sockets | CANDIDATE |
 
 ### Phase 1 bounded slices
 
@@ -95,16 +95,16 @@ The earlier Phase 4 candidate `68fdb66aa90462739b208e6c3eae4733d0347471` was not
 
 The Model Freeze Gate may open only after Phases 0–11 are implemented to the required maturity and certified.
 
-Phase 5 completion is owner-authorized under the 2026-10-02 architecture handoff.
-The live overlay contains schema 4 and deterministic living-memory/recall;
-the completion candidate passes 57 developer tests and unsigned assembly.
-Independent review, signed exact-candidate CI and phone acceptance remain pending.
+Phase 5 source `57c6d17` has signed CI #26 and owner phone PASS; Mio review is
+pending. Owner-authorized continuation adds tested deterministic candidates for
+Phases 6–11. These candidates require independent review, exact-candidate signed
+CI and phone validation before certification. The model gate remains closed.
 
 ## Neural integration — only after foundation certification
 
 | Phase | Scope | Status |
 |---|---|---|
-| 12 | Generic model admission + compatibility framework | LOCKED |
+| 12 | Generic model admission + compatibility framework | GROUNDED FRAMEWORK CANDIDATE; neural admission locked |
 | 13 | System-One candidate integration | LOCKED |
 | 14 | Semantic embedding/reranking specialists | LOCKED |
 | 15 | Optional affect/intent specialist models | LOCKED |
@@ -112,15 +112,17 @@ Independent review, signed exact-candidate CI and phone acceptance remain pendin
 | 17 | Main uncensored/open-weight Language & Expression engine | LOCKED |
 | 18 | Vision, speech, wake word, multimodal embodiment | LOCKED |
 | 19 | Autonomous proactive cognition tuning | LOCKED |
-| 20 | Vault / continuity migration | LOCKED |
-| 21 | Cross-engine replacement proof | LOCKED |
-| 22 | Device-migration proof / architectural completion | LOCKED |
+| 20 | Vault / continuity migration | BOUNDED CURRENT-SCHEMA VAULT CANDIDATE |
+| 21 | Cross-engine replacement proof | MOCK PROOF ONLY; real-engine proof pending |
+| 22 | Device-migration proof / architectural completion | FRESH-DATABASE RESTORE TEST ONLY; physical migration pending |
 
 ## Current next milestone
 
-Review the Phase 5 completion candidate, obtain exact-candidate signed CI evidence,
-and perform the documented upgrade/launch/restart phone acceptance. Then certify
-Phase 5 and bound the Phase 6 affect/reward scaffold. The completion handoffs live
-in `PROJECT_HANDOFF/2026-10-02_PHASE_5_*_HANDOFF.md`.
+Deliver the continuation candidate and obtain independent review, signed CI and
+Galaxy S26+ upgrade/restart/Vault acceptance. See
+`PROJECT_HANDOFF/2026-10-02_CONTINUATION_IMPLEMENTATION_HANDOFF.md`.
 
-No candidate neural-model download or integration is authorized.
+Phases 13–19 have interface/mock scaffolding only. Real weights, adapters, native
+runtimes and autonomous neural tuning are not integrated. The owner requested a
+separate plug-and-play model subsystem and a deeper discussion of language/voice
+and local Laya decision models when approaching those integrations.
