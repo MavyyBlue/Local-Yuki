@@ -17,6 +17,30 @@
 **Fixed debug/update signing lineage:** ESTABLISHED  
 **Production release signing lineage:** NOT ESTABLISHED
 
+## Live candidate overlay — 2026-10-02
+
+The certified baseline above remains Phase 4. The live `main` source at `59eb7f8`
+already includes an **uncertified Phase 5 candidate** with physical schema `4`,
+living-memory semantic format `1`, migration `2026-09-25-living-memory-v1`,
+episodic/surface views, age/importance/reinforcement policy, idempotent meaningful
+recall and deterministic lexical/reranker sockets. Earlier sections describe
+the certified baseline, not the newer overlay's schema.
+
+The current completion branch hardens that candidate: atomic surface refresh,
+revision-specific reinforcement, bounded/truncation-aware recall, stale-index
+filtering, corruption propagation, optional-adapter fallback and detached ranker
+inputs. No deep evidence/history, identity, signing lineage or permissions are
+changed. No model is downloaded or integrated.
+
+Developer evidence: 22 foundation tests and 35 Android/Robolectric tests pass;
+foundation-boundary verification and unsigned debug assembly pass using JDK 17,
+SDK 35 and the proxy-aware `scripts/check.py` launcher. Independent Mio review,
+exact-candidate signed CI and Mavyy's phone acceptance are **pending**. These are
+developer results, not certification.
+
+See [completion architecture handoff](2026-10-02_PHASE_5_ARCHITECTURE_HANDOFF.md)
+and [implementation handoff](2026-10-02_PHASE_5_IMPLEMENTATION_HANDOFF.md).
+
 ## 1. Certified baseline
 
 Phase 0 established the live-repository baseline.
@@ -242,9 +266,9 @@ Proceed to architectural design for:
 
 **Phase 5 — Living memory and semantic-recall socket**
 
-Phase 5 implementation is **not authorized by this documentation sync alone**.
-
-Before implementation, Yuki must perform a fresh live-repository reset and issue a bounded Phase 5 architecture handoff.
+The current owner request authorizes finishing the live Phase 5 candidate after
+a fresh reset. The bounded 2026-10-02 architecture handoff records that scope.
+Certification still requires the independent and phone gates below.
 
 Phase 5 must build on Phase 4's app-owned evidence/history authority without transferring truth ownership to learned retrieval.
 

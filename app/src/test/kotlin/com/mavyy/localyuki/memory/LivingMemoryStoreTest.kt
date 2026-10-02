@@ -152,4 +152,174 @@ class LivingMemoryStoreTest {
             }
         }
     }
+    @Test fun importanceAndReinforcementRefreshProjectionAtomically() {
+        MemoryStore(context,temporal).use { deep ->
+            seed(deep)
+            ok(deep.ownerUpdate(OwnerUpdate("long-content","memory","long-rev","rev-a",
+                (1..48).joinToString(" ") { "word$it" },e2)))
+            LivingMemoryStore(context,temporal,deep.reader()).use { living ->
+                living.open(); ok(living.reconcilePage(null,10))
+                instant=instant.plus(Duration.ofDays(100))
+                val sparse=ok(living.reconcilePage(null,10)).single()
+                assertEquals(12,sparse.terms.size)
+                val important=ok(living.setImportance("memory",sparse.stateRevision,80))
+                assertEquals(AbstractionLevel.COMPACT,important.abstraction)
+                assertEquals(24,important.terms.size)
+                var revision=important.stateRevision
+                repeat(5) { revision=ok(living.recordMeaningfulRecall("reinforce-$it","memory","long-rev",revision)) }
+                val reinforced=ok(living.current("memory"))
+                assertEquals(AbstractionLevel.DETAILED,reinforced.abstraction)
+                assertEquals(48,reinforced.terms.size)
+                assertEquals(50,reinforced.reinforcement)
+                assertEquals(5L,reinforced.meaningfulRecallCount)
+                assertEquals(2,ok(deep.history("memory",0,10)).size)
+                assertEquals("Original evidence",ok(deep.getEvidence(e1)).payload)
+            }
+        }
+    }
+    @Test fun meaningfulRecallReplaySurvivesClockLossAndRevisionChange() {
+        MemoryStore(context,temporal).use { deep ->
+            seed(deep)
+            LivingMemoryStore(context,temporal,deep.reader()).use { living ->
+                living.open(); val initial=ok(living.reconcilePage(null,10)).single()
+                val eventRevision=ok(living.recordMeaningfulRecall("replay","memory","rev-a",initial.stateRevision))
+                val firstRecall=ok(living.current("memory")).lastMeaningfulRecallAt
+                instant=instant.minusSeconds(300)
+                ok(living.recordMeaningfulRecall("rollback","memory","rev-a",eventRevision))
+                assertEquals(firstRecall,ok(living.current("memory")).lastMeaningfulRecallAt)
+                ok(deep.ownerUpdate(OwnerUpdate("correct","memory","correct-rev","rev-a","Corrected content",e2)))
+                val fresh=ok(living.reconcilePage(null,10)).single()
+                assertEquals(0,fresh.reinforcement)
+                assertEquals(0L,fresh.meaningfulRecallCount)
+                assertNull(fresh.lastMeaningfulRecallAt)
+                available=false
+                assertEquals(eventRevision,ok(living.recordMeaningfulRecall("replay","memory","rev-a",initial.stateRevision)))
+                assertEquals(FoundationResult.Failure(FailureCategory.CONFLICT),
+                    living.recordMeaningfulRecall("replay","memory","correct-rev",initial.stateRevision))
+            }
+        }
+    }
+    @Test fun staleIndexEntriesCannotConsumeTheQueryLimit() {
+        MemoryStore(context,temporal).use { deep ->
+            seed(deep)
+            ok(deep.create(CreateMemory("second","z-memory","z-rev",MemoryKind.FACTUAL,"Forest path",listOf(e1))))
+            LivingMemoryStore(context,temporal,deep.reader()).use { living ->
+                living.open(); ok(living.reconcilePage(null,10))
+                ok(deep.ownerUpdate(OwnerUpdate("change","memory","changed","rev-a","Unrelated orchard",e2)))
+                DeterministicLexicalRecallEngine(context,deep.reader(),living.reader(),living::coverage).use { lexical ->
+                    val result=ok(lexical.recall(RecallQuery("forest",1)))
+                    assertEquals(listOf("z-memory"),result.candidates.map { it.memory.id })
+                    assertEquals(IndexCoverage.PARTIAL,result.coverage)
+                }
+            }
+        }
+    }
+    @Test fun throwingInvalidAndMutatingAdvisoryAdaptersDegradeToGroundedLexicalRecall() {
+        MemoryStore(context,temporal).use { deep ->
+            seed(deep)
+            LivingMemoryStore(context,temporal,deep.reader()).use { living ->
+                living.open(); ok(living.reconcilePage(null,10))
+                DeterministicLexicalRecallEngine(context,deep.reader(),living.reader(),living::coverage).use { lexical ->
+                    val query=RecallQuery("forest",5)
+                    val baseline=ok(lexical.recall(query))
+                    assertEquals(IndexCoverage.COMPLETE,baseline.coverage)
+                    val broken=SemanticCandidateEngine { throw IllegalStateException("unavailable adapter") }
+                    assertEquals(baseline,ok(lexical.recall(query,candidateEngine=broken)))
+                    val unavailable=SemanticCandidateEngine { FoundationResult.Unavailable(UnavailableReason.DEPENDENCY_UNAVAILABLE) }
+                    assertEquals(baseline,ok(lexical.recall(query,candidateEngine=unavailable)))
+                    val invalid=MockSemanticCandidateEngine(listOf(RecallCandidateHint("memory","rev-a",101,listOf("forest"),RecallBasis.MOCK)))
+                    assertEquals(baseline,ok(lexical.recall(query,candidateEngine=invalid)))
+                    val mock=MockSemanticCandidateEngine(listOf(RecallCandidateHint("memory","rev-a",80,listOf("forest"),RecallBasis.MOCK)))
+                    assertEquals(RecallBasis.MOCK,ok(lexical.recall(query,candidateEngine=mock)).candidates.single().basis)
+                    assertTrue(ok(lexical.recall(RecallQuery("forest",5,MemoryKind.AUTOBIOGRAPHICAL),candidateEngine=mock)).candidates.isEmpty())
+                    val throwing=RecallReranker { throw IllegalStateException("ranker unavailable") }
+                    val fallback=ok(lexical.recall(query,throwing))
+                    assertFalse(fallback.reranked)
+                    assertEquals(baseline.candidates,fallback.candidates)
+                    val mutating=RecallReranker { candidates ->
+                        (candidates.single().surface.terms as MutableList<String>).clear()
+                        candidates
+                    }
+                    assertEquals(baseline.candidates,ok(lexical.recall(query,mutating)).candidates)
+                    val forged=RecallReranker { candidates -> candidates.map { it.copy(
+                        memory=it.memory.copy(current=it.memory.current.copy(content="fabricated truth")),
+                        advisoryScore=100) } }
+                    assertEquals(baseline.candidates,ok(lexical.recall(query,forged)).candidates)
+                }
+            }
+        }
+    }
+    @Test fun malformedHintsAndCorruptSurfaceFailClosedWithoutTouchingDeepHistory() {
+        MemoryStore(context,temporal).use { deep ->
+            seed(deep)
+            LivingMemoryStore(context,temporal,deep.reader()).use { living ->
+                living.open(); ok(living.reconcilePage(null,10))
+                DeterministicLexicalRecallEngine(context,deep.reader(),living.reader()).use { lexical ->
+                    for (terms in listOf(listOf("FOREST"),listOf("forest","forest"),listOf("a".repeat(33))))
+                        assertEquals(FoundationResult.Failure(FailureCategory.INVALID_INPUT),
+                            lexical.ground(listOf(RecallCandidateHint("memory","rev-a",1,terms,RecallBasis.MOCK))))
+                    db().use { it.execSQL("UPDATE living_memory_term SET term='invented' WHERE term='forest'") }
+                    assertEquals(FoundationResult.Failure(FailureCategory.CONFLICT),living.current("memory"))
+                    assertEquals(FoundationResult.Failure(FailureCategory.CONFLICT),living.reconcilePage(null,10))
+                    assertEquals("Forest forest sunlight sunlight song",ok(deep.getCurrent("memory")).current.content)
+                    assertEquals("Original evidence",ok(deep.getEvidence(e1)).payload)
+                }
+            }
+        }
+    }
+    @Test fun corruptDeepEvidenceCannotMasqueradeAsAnEmptyRecall() {
+        MemoryStore(context,temporal).use { deep ->
+            seed(deep)
+            LivingMemoryStore(context,temporal,deep.reader()).use { living ->
+                living.open(); ok(living.reconcilePage(null,10))
+                db().use {
+                    it.execSQL("DROP TRIGGER immutable_memory_evidence_update")
+                    it.execSQL("UPDATE memory_evidence SET payload='corrupt' WHERE evidence_id='e1'")
+                }
+                DeterministicLexicalRecallEngine(context,deep.reader(),living.reader()).use { lexical ->
+                    assertEquals(FoundationResult.Failure(FailureCategory.CONFLICT),lexical.recall(RecallQuery("forest",5)))
+                }
+            }
+        }
+    }
+    @Test fun boundedLookupReportsPartialCoverageWhenMoreMatchesExist() {
+        MemoryStore(context,temporal).use { deep ->
+            seed(deep)
+            repeat(DeterministicLexicalRecallEngine.MAX_TERM_MATCHES) { index ->
+                val id="many-${index.toString().padStart(3,'0')}"
+                ok(deep.create(CreateMemory("cmd-$id",id,"rev-$id",MemoryKind.FACTUAL,"Forest song",listOf(e1))))
+            }
+            LivingMemoryStore(context,temporal,deep.reader()).use { living ->
+                living.open()
+                var cursor: String?=null
+                do {
+                    val page=ok(living.reconcilePage(cursor,50))
+                    cursor=page.lastOrNull()?.memoryId ?: cursor
+                } while (page.size==50)
+                assertEquals(IndexCoverage.COMPLETE,ok(living.coverage()))
+                DeterministicLexicalRecallEngine(context,deep.reader(),living.reader(),living::coverage).use { lexical ->
+                    val result=ok(lexical.recall(RecallQuery("forest",20)))
+                    assertEquals(20,result.candidates.size)
+                    assertEquals(IndexCoverage.PARTIAL,result.coverage)
+                }
+            }
+        }
+    }
+    @Test fun episodeLookupWorksBeyondTheFirstHistoryPage() {
+        MemoryStore(context,temporal).use { deep ->
+            seed(deep)
+            var head="rev-a"
+            repeat(101) { index ->
+                val next="history-$index"
+                ok(deep.ownerUpdate(OwnerUpdate("history-cmd-$index","memory",next,head,"Revision $index",e2)))
+                head=next
+            }
+            LivingMemoryStore(context,temporal,deep.reader()).use { living ->
+                living.open()
+                assertEquals(MemoryStatus.HISTORICAL,ok(living.episode("memory","history-99")).status)
+                assertEquals(MemoryStatus.CURRENT,ok(living.episode("memory",head)).status)
+            }
+        }
+    }
+
 }

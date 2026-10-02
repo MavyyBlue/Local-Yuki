@@ -39,3 +39,11 @@ The North Star defines the destination. It never proves that a feature already e
 `Yuki architecture handoff → Akari implementation handoff → Mio QA handoff → Mavyy phone acceptance → Yuki doc sync → certified baseline`
 
 Historical handoffs belong under `PROJECT_HANDOFF/HISTORY/`. They are evidence, not current authority.
+
+## Current candidate work
+
+The live source overlay `59eb7f8` already contains Phase 5 implementation beyond
+the certified Phase 4 baseline. Mavyy's 2026-10-02 request authorizes its bounded
+completion. Read the [architecture handoff](2026-10-02_PHASE_5_ARCHITECTURE_HANDOFF.md)
+and [implementation handoff](2026-10-02_PHASE_5_IMPLEMENTATION_HANDOFF.md) for the
+candidate's behavior, developer evidence and pending independent/phone gates.

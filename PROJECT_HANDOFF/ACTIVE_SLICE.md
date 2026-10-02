@@ -13,11 +13,15 @@
 **Yuki State semantic version:** `1`  
 **Memory semantic version:** `1`  
 **Model Freeze Gate:** CLOSED  
-**Implementation authorization:** NOT YET AUTHORIZED — await a bounded Phase 5 Yuki architecture handoff after a fresh live-repository reset
+**Implementation authorization:** Owner-authorized Phase 5 completion, bounded by the [2026-10-02 architecture handoff](2026-10-02_PHASE_5_ARCHITECTURE_HANDOFF.md) after live-source reset
+
+**Live candidate:** schema `4`, living-memory format `1`; certified baseline above remains schema `3`
+
+**Status:** CANDIDATE — developer checks pass; independent QA, signed CI and phone acceptance pending
 
 ## Purpose
 
-Design the next bounded foundation slice for living-memory behavior and the semantic-recall socket while preserving Phase 4's deterministic memory/evidence authority.
+Finish and validate the live living-memory/semantic-recall candidate while preserving Phase 4's deterministic memory/evidence authority.
 
 Phase 5 may introduce deterministic lifecycle/scaffolding that prepares memory for later semantic access, but learned retrieval must remain advisory and must never become the source of autobiographical truth.
 
@@ -50,7 +54,7 @@ Phase 5 must build additively on this baseline.
 
 ## Required architectural questions for the next Yuki handoff
 
-Before implementation, Yuki must freshly inspect the live repository and define:
+The 2026-10-02 architecture handoff answers these questions against live overlay `59eb7f8`:
 
 - what “living memory” means without allowing automatic truth rewriting,
 - what deterministic lifecycle metadata, if any, is authoritative,

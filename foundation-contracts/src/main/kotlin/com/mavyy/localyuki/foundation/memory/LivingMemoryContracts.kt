@@ -58,6 +58,10 @@ object LivingMemoryPolicyV1 {
     const val MAX_TERM_LENGTH = 32
     private val budgets = intArrayOf(48, 24, 12, 6)
     fun budget(level: AbstractionLevel): Int = budgets[level.ordinal]
+    fun validTerm(term: String): Boolean = term.isNotEmpty() &&
+        term.codePointCount(0, term.length) <= MAX_TERM_LENGTH &&
+        term == term.lowercase(java.util.Locale.ROOT) &&
+        term.codePoints().allMatch { Character.isLetterOrDigit(it) }
     /** Unicode code points avoid splitting supplementary letters; stable first appearance breaks frequency ties. */
     fun terms(text: String, max: Int): List<String> {
         require(max in 1..48)

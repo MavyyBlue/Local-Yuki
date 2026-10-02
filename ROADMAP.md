@@ -13,7 +13,7 @@ Status legend: `NOT STARTED` / `ACTIVE` / `CANDIDATE` / `MIO PASS` / `PHONE ACCE
 | 2 | Identity + Personality Capsule + substrate boundary | CERTIFIED |
 | 3 | Yuki State + Temporal Grounding | CERTIFIED |
 | 4 | Memory authority + provenance completion | CERTIFIED |
-| 5 | Living memory + semantic-recall socket | ACTIVE |
+| 5 | Living memory + semantic-recall socket | CANDIDATE |
 | 6 | Affective / Reward scaffolding | NOT STARTED |
 | 7 | Embodied Capability Registry + Executive Action Control | NOT STARTED |
 | 8 | Resource Governor + physical-body model | NOT STARTED |
@@ -95,7 +95,10 @@ The earlier Phase 4 candidate `68fdb66aa90462739b208e6c3eae4733d0347471` was not
 
 The Model Freeze Gate may open only after Phases 0–11 are implemented to the required maturity and certified.
 
-Phase 5 is now active, but implementation requires a fresh Yuki architecture handoff.
+Phase 5 completion is owner-authorized under the 2026-10-02 architecture handoff.
+The live overlay contains schema 4 and deterministic living-memory/recall;
+the completion candidate passes 57 developer tests and unsigned assembly.
+Independent review, signed exact-candidate CI and phone acceptance remain pending.
 
 ## Neural integration — only after foundation certification
 
@@ -115,6 +118,9 @@ Phase 5 is now active, but implementation requires a fresh Yuki architecture han
 
 ## Current next milestone
 
-Perform a fresh live-repository reset and design the bounded Phase 5 — Living memory and semantic-recall socket — architecture slice.
+Review the Phase 5 completion candidate, obtain exact-candidate signed CI evidence,
+and perform the documented upgrade/launch/restart phone acceptance. Then certify
+Phase 5 and bound the Phase 6 affect/reward scaffold. The completion handoffs live
+in `PROJECT_HANDOFF/2026-10-02_PHASE_5_*_HANDOFF.md`.
 
 No candidate neural-model download or integration is authorized.
