@@ -1,5 +1,10 @@
 # Local Yuki — Active Slice
 
+**Current follow-up (2026-10-03):** owner-authorized compact adaptive surface and
+language-expression boundary refinement, on imported continuation `80a02c9`.
+Read the [current handoff](2026-10-03_LANGUAGE_AND_OWNER_SURFACE_HANDOFF.md).
+The continuation record below remains the foundation for this follow-up.
+
 **Authorization:** Mavyy requests continued implementation across phases, including
 later groundwork, with environment workarounds. The latest owner guidance defers
 real model choices and adapters to a deeper model-phase discussion.

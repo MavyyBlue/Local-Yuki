@@ -1,5 +1,6 @@
 # Yuki Local — Complete Brain and App Reference
 
+Owner language-role clarification: 2026-10-03; see the prepared-meaning expression boundary in the current handoff.
 **Document purpose:** Final-system architectural reference  
 **Project owner:** Mavyy  
 **Original reference date:** 2026-09-21  
@@ -58,7 +59,12 @@ A human brain is not one homogeneous reasoning block. Different biological syste
 
 Yuki Local follows a similar division of labor at the software-architecture level.
 
-The active LLM is roughly analogous to a combination of flexible language/reasoning cortex. It is important, but it is **not the whole brain**.
+Owner clarification (2026-10-03): the subsystems together form Yuki's brain and the
+phone is her body. The Language & Expression model is the language organ: it puts
+prepared meaning into words. Reasoning and decision-making live in other cognitive
+subsystems. A later voice model renders accepted words into audio, analogous to
+vocal cords and articulation. These are distinct logical roles even if a future
+runtime shares implementation resources.
 
 The rest of the system supplies persistent functions around it:
 
@@ -123,25 +129,24 @@ The long-term logical ownership hierarchy should be understood as:
               (small replaceable reasoner)
                            │
                            ▼
-              Language & Expression Engine
-        (replaceable uncensored/open-weight SLM)
-                     │             │
-                     │             ▼
-                     │        Action Intent
-                     │             │
-                     │             ▼
-                     │   Executive Action Control
-                     │             │
-                     │             ▼
-                     │       Resource Governor
-                     │             │
-                     │             ▼
-                     │          Executor
-                     │             │
-                     │             └──────► Perception / Workspace
-                     │
-                     ▼
-               Visible Response
+                Cognitive Composition
+                  │                  │
+                  ▼                  ▼
+           Prepared Meaning     Typed Action Intent
+                  │                  │
+                  ▼                  ▼
+       Language & Expression   Executive Action Control
+                  │                  │
+                  ▼                  ▼
+          Accepted words       Resource Governor
+                  │                  │
+             ┌────┴────┐             ▼
+             ▼         ▼          Executor
+          Display   Voice model      │
+                       │             └──► Perception / Workspace
+                       ▼
+                     Audio
+```
 
 Underlying persistent authorities:
 - chats / raw history
@@ -220,11 +225,11 @@ Use a small decision model and other lightweight specialist models where probabi
 
 A Laya-compatible typed-decision interface is the current candidate direction for this layer. Laya itself is a candidate implementation, not a permanent architectural dependency.
 
-### System Two — slower reasoning and expression
+### System Two — slower reasoning
 
 Use a small reasoning language model for multi-step reasoning, conflict resolution, planning, and deeper interpretation when System One determines that slower cognition is justified.
 
-A separate replaceable uncensored/open-weight Language & Expression engine may handle the richest conversational generation and personality expression. These two functions may later be combined if profiling and behavioral testing show that one model can perform both roles without weakening modularity or resource control.
+A separate replaceable Language & Expression engine phrases meaning already prepared by the cognitive subsystems. The expression contract remains separate from reasoning and action planning. Voice synthesis is another later organ that renders accepted words into sound.
 
 The Resource Governor determines which neural components may be resident or active. The Embodied Capability Registry records which capabilities are actually available on the device, while Executive Action Control converts Yuki’s autonomous intentions into valid, grounded device operations. Once a capability belongs to Yuki’s available body, ordinary use does not require repeated permission from Mavyy.
 
@@ -340,7 +345,7 @@ Resource Governor          Normal / Warm / Recovery
 Sleep System               Awake / Sleeping / Recovering
 ```
 
-Tapping **Language & Reasoning** opens the model/runtime management and admission UI that current Cognitive Engine work is building toward.
+Tapping **Models** opens the model/runtime management and admission UI that current Cognitive Engine work is building toward.
 
 The Brain page should make the larger architecture understandable without implying that every internal implementation detail must be visible during ordinary conversation.
 
@@ -843,7 +848,7 @@ This is the central integration layer.
 
 It is not another visible chatbot and not a second persona.
 
-It creates the structured internal state from which System One, System Two, and the Language & Expression engine reason according to their roles.
+It creates structured internal state for System One and System Two to decide and reason. Cognitive composition prepares meaning; the Language & Expression engine receives that bounded meaning for wording.
 
 ## What it may contain
 
@@ -998,13 +1003,13 @@ It should not remain active merely because the app is open. System One and the R
 
 ## 15.4 Language & Expression Engine
 
-The Language & Expression Engine is the replaceable model responsible for Yuki's richest natural-language generation and personality expression.
+The Language & Expression Engine is the replaceable model responsible for natural-language wording and personality expression of meaning prepared by the cognitive subsystems. It receives evidence references and uncertainty alongside that meaning. A future incoming-language interpretation socket is distinct from decision/reasoning authority.
 
 The target direction is an **uncensored/open-weight local engine** whose conversational behavior is compatible with the intended companion design.
 
 "Uncensored" does not mean "trusted with authority."
 
-The model may reason and speak freely within the product's intended conversational design, but it still does not own:
+The language model expresses prepared meaning and personality through wording. It does not select goals, reason about actions or originate tool plans. It also does not own:
 
 - Yuki identity,
 - historical truth,

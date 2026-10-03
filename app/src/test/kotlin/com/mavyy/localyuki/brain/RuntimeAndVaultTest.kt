@@ -78,6 +78,37 @@ class RuntimeAndVaultTest {
             assertEquals(FoundationResult.Failure(FailureCategory.CONFLICT),TurnCoordinator(RealityVerification(brain.memory.reader(),brain.capabilities),MockSystemOneEngine(),MockLanguageEngine("x")).respond(wrong))
         }
     }
+    @Test fun languageReceivesPreparedMeaningAfterThinkingAndCannotInventSources() {
+        brain().use { brain ->
+            assertTrue(brain.open())
+            val input=ok(brain.saveInput("What do you think of an apple?"))
+            val turn=ok(brain.context(input))
+            val order=mutableListOf<String>()
+            val decision=SystemOneEngine { order+="decide";FoundationResult.Success(Decision(DecisionKind.REASON,100)) }
+            val reasoning=SystemTwoEngine { order+="reason";FoundationResult.Success(ReasoningProposal("Recall the apple association.",listOf(input.ref))) }
+            val composer=MeaningComposer { context,_ ->
+                order+="meaning"
+                assertEquals("Recall the apple association.",context.reasoning)
+                FoundationResult.Success(PreparedMeaning(listOf("An apple brings an orchard to mind."),listOf(input.ref),setOf("This is an association, not a recalled event.")))
+            }
+            val language=LanguageExpressionEngine { request ->
+                order+="words"
+                assertEquals(listOf("An apple brings an orchard to mind."),request.meaning.points)
+                assertEquals(setOf("This is an association, not a recalled event."),request.meaning.uncertainty)
+                FoundationResult.Success(Expression("Apples make me think of orchards.",request.meaning.evidence))
+            }
+            val coordinator=TurnCoordinator(RealityVerification(brain.memory.reader(),brain.capabilities),decision,language,reasoning,composer)
+            assertEquals("Apples make me think of orchards.",ok(coordinator.respond(turn)).text)
+            assertEquals(listOf("decide","reason","meaning","words"),order)
+            var expressed=false
+            val badComposer=MeaningComposer { _,_ -> FoundationResult.Success(PreparedMeaning(listOf("Invented fact"),listOf(EvidenceRef("invented",EvidenceSourceKind.AUTHORITY_RECORD)))) }
+            val forbiddenLanguage=LanguageExpressionEngine { expressed=true;FoundationResult.Success(Expression("x",listOf(input.ref))) }
+            assertEquals(FoundationResult.Failure(FailureCategory.REJECTED),TurnCoordinator(
+                RealityVerification(brain.memory.reader(),brain.capabilities),decision,forbiddenLanguage,reasoning,badComposer).respond(turn))
+            assertFalse(expressed)
+            assertEquals(input,ok(brain.memory.getEvidence(input.ref)))
+        }
+    }
     @Test fun grantedLocalNotesExecuteAndReplayExactlyOnce() {
         brain().use { brain ->assertTrue(brain.open())
             val intent=ActionIntent("note-action",CapabilityId.LOCAL_NOTE,"Saved tool note")

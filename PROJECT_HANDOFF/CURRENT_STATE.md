@@ -1,6 +1,6 @@
 # Local Yuki — Current State
 
-Last synchronized: 2026-10-02. Strategy: brain-first, model-neutral.
+Last synchronized: 2026-10-03. Strategy: brain-first, model-neutral.
 
 ## Evidence and baseline
 
@@ -48,6 +48,28 @@ or skips; boundary verification, unsigned debug assembly and lint pass. Lint has
 0 errors and 6 warnings (tool/dependency/target updates, application icon and disk
 space heuristic). These are local results, not signed CI or independent QA.
 Continuation exact-candidate signed CI, Mio review and phone acceptance are pending.
+
+## Owner language clarification and surface refinement — 2026-10-03
+
+The continuation overlay was imported as remote `80a02c9`; its tracked source
+matches the delivered continuation. Android CI #27 (`37080120136`)
+succeeded on that imported source. The new owner-surface candidate builds on it.
+No phone PASS or independent certification is inferred for that imported candidate.
+
+The owner clarified that cognitive subsystems form the brain, the phone is the
+body, language expresses prepared meaning, and a later voice model speaks it.
+The language socket now takes bounded prepared meaning rather than a full
+thinking context; meaning composition precedes wording and actions use their own
+executive path. North Star and Phase 17 descriptions have been corrected.
+
+The owner console is simplified to a message area and grouped menus. Adaptive
+safe-area handling excludes system bars/cutouts/keyboard, with scrolling and a
+maximum readable width. Existing memory, note, rest and Vault controls remain
+accessible. See the [language/surface handoff](2026-10-03_LANGUAGE_AND_OWNER_SURFACE_HANDOFF.md).
+Developer follow-up checks pass: 32 foundation + 51 Android tests (83 total),
+boundary verification, unsigned assembly and lint (zero errors). New exact-source
+signed CI, layout phone acceptance and independent review remain
+pending. No real language or voice runtime has been added.
 
 ## Model and phone direction
 

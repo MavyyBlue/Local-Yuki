@@ -76,7 +76,25 @@ data class ReasoningProposal(val plan: String,val evidence: List<EvidenceRef>) {
 data class Expression(val text: String,val evidence: List<EvidenceRef>) { init { require(MemoryBounds.text(text,4096) && evidence.size<=32) } }
 fun interface SystemOneEngine { fun decide(context: YukiTurnContext): FoundationResult<Decision> }
 fun interface SystemTwoEngine { fun reason(context: YukiTurnContext): FoundationResult<ReasoningProposal> }
-fun interface LanguageExpressionEngine { fun express(context: YukiTurnContext): FoundationResult<Expression> }
+/** App/cognition-prepared meaning. Language chooses wording, not plans, actions or factual authority. */
+data class PreparedMeaning(val points: List<String>,val evidence: List<EvidenceRef>,val uncertainty: Set<String> = emptySet()) {
+    init {
+        require(points.size in 1..16 && points.all { MemoryBounds.text(it,2048) })
+        require(points.sumOf { it.toByteArray(Charsets.UTF_8).size }<=4096)
+        require(evidence.size in 1..32 && uncertainty.size<=16 && uncertainty.all { it.length in 1..160 })
+    }
+}
+/** Deliberately excludes raw input, memory stores, capabilities, reasoning workspace and tool handles. */
+data class ExpressionRequest(val meaning: PreparedMeaning)
+fun interface MeaningComposer {
+    fun compose(context: YukiTurnContext,decision: Decision): FoundationResult<PreparedMeaning>
+}
+/** Foundation fallback only: acknowledges receipt; never invents an answer to a question. */
+object AcknowledgementComposer : MeaningComposer {
+    override fun compose(context: YukiTurnContext,decision: Decision)=FoundationResult.Success(
+        PreparedMeaning(listOf("Your message has been received."),listOf(context.inputEvidence),context.uncertainty.toSet()))
+}
+fun interface LanguageExpressionEngine { fun express(request: ExpressionRequest): FoundationResult<Expression> }
 fun interface EmbeddingEngine { fun embed(text: String): FoundationResult<List<Float>> }
 fun interface VisionEngine { fun describe(inputId: String): FoundationResult<String> }
 fun interface SpeechEngine { fun transcribe(inputId: String): FoundationResult<String> }
@@ -84,7 +102,7 @@ class MockSystemOneEngine : SystemOneEngine {
     override fun decide(context: YukiTurnContext)=FoundationResult.Success(Decision(if(context.uncertainty.isEmpty()) DecisionKind.RESPOND else DecisionKind.REASON,100))
 }
 object UnavailableLanguageEngine : LanguageExpressionEngine {
-    override fun express(context: YukiTurnContext)=FoundationResult.Unavailable(UnavailableReason.NOT_IMPLEMENTED)
+    override fun express(request: ExpressionRequest)=FoundationResult.Unavailable(UnavailableReason.NOT_IMPLEMENTED)
 }
 object UnavailableSystemTwoEngine : SystemTwoEngine {
     override fun reason(context: YukiTurnContext)=FoundationResult.Unavailable(UnavailableReason.NOT_IMPLEMENTED)
@@ -94,11 +112,12 @@ class MockSystemTwoEngine : SystemTwoEngine {
         "Use the available evidence; preserve uncertainty where grounding is incomplete.",listOf(context.inputEvidence)))
 }
 class MockLanguageEngine(private val response: String) : LanguageExpressionEngine {
-    override fun express(context: YukiTurnContext)=FoundationResult.Success(Expression(response,listOf(context.inputEvidence)))
+    override fun express(request: ExpressionRequest)=FoundationResult.Success(Expression(response,request.meaning.evidence.toList()))
 }
 /** Replaceable engines receive verified context and return proposals, never authoritative mutations. */
 class TurnCoordinator(private val verifier: RealityVerification,private val systemOne: SystemOneEngine,
-    private val language: LanguageExpressionEngine,private val systemTwo: SystemTwoEngine=UnavailableSystemTwoEngine) {
+    private val language: LanguageExpressionEngine,private val systemTwo: SystemTwoEngine=UnavailableSystemTwoEngine,
+    private val composer: MeaningComposer=AcknowledgementComposer) {
     private fun detached(c: YukiTurnContext)=c.copy(
         state=c.state.copy(intentions=c.state.intentions.toList(),topics=c.state.topics.toList(),interactions=c.state.interactions.toList()),
         memories=c.memories.map { m -> m.copy(memory=m.memory.copy(current=m.memory.current.copy(evidence=m.memory.current.evidence.toList())),
@@ -128,10 +147,21 @@ class TurnCoordinator(private val verifier: RealityVerification,private val syst
                 }
             }
         }
-        val output=try { language.express(detached(integrated)) } catch (_: Exception) { return FoundationResult.Failure(FailureCategory.INTERNAL_FAILURE) }
+        // Thought/meaning selection happens before wording, in a separate cognitive subsystem.
+        val composed=try { composer.compose(detached(integrated),decision.value) }
+            catch (_: Exception) { return FoundationResult.Failure(FailureCategory.INTERNAL_FAILURE) }
+        val meaning=when(composed) {
+            is FoundationResult.Failure -> return composed
+            is FoundationResult.Unavailable -> return composed
+            is FoundationResult.Success -> composed.value
+        }
+        val permitted=context.memories.flatMap { it.memory.current.evidence }.toSet()+context.inputEvidence
+        if(meaning.evidence.any { it !in permitted }) return FoundationResult.Failure(FailureCategory.REJECTED)
+        val groundedEvidence=meaning.evidence.toSet()
+        val request=ExpressionRequest(meaning.copy(points=meaning.points.toList(),evidence=meaning.evidence.toList(),uncertainty=meaning.uncertainty.toSet()))
+        val output=try { language.express(request) } catch (_: Exception) { return FoundationResult.Failure(FailureCategory.INTERNAL_FAILURE) }
         if(output is FoundationResult.Success) {
-            val permitted=context.memories.flatMap { it.memory.current.evidence }.toSet()+context.inputEvidence
-            if(output.value.evidence.isEmpty() || output.value.evidence.any { it !in permitted }) return FoundationResult.Failure(FailureCategory.REJECTED)
+            if(output.value.evidence.isEmpty() || output.value.evidence.any { it !in groundedEvidence }) return FoundationResult.Failure(FailureCategory.REJECTED)
         }
         return output
     }

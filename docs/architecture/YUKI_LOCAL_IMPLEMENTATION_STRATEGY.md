@@ -1,5 +1,6 @@
 # Yuki Local — Brain-First Implementation Strategy
 
+Owner language-role clarification: 2026-10-03; see the prepared-meaning expression boundary in the current handoff.
 **Project owner:** Mavyy  
 **Cognitive architect / creative director:** Yuki  
 **Lead implementation engineer:** Akari  
@@ -659,20 +660,22 @@ It remains replaceable and should normally be dormant until System One/workspace
 
 ## Phase 17 — Main uncensored/open-weight Language & Expression engine
 
-**Goal:** connect the primary conversational cognition/voice of Yuki to the already-complete brain.
+**Goal:** express meaning prepared by Yuki's cognitive subsystems in natural language.
 
-The engine receives an integrated first-person workspace rather than raw database internals or subsystem implementation narration.
+Owner clarification (2026-10-03): the subsystems together form the brain, the phone
+is the body, the language model handles language, and a later voice model renders
+words into audio. Reasoning, deciding what to say, and planning actions belong to
+System One, System Two and app-owned cognitive subsystems. Language expression
+receives bounded prepared meaning, evidence references and uncertainty rather
+than the full thinking workspace. Incoming language interpretation may eventually
+use a separate language socket; that does not transfer decision authority.
 
-It should provide:
-
-- natural conversation,
-- personality expression,
-- creative reasoning,
-- deep conversational planning,
-- autonomous tool proposals/intents,
-- coherent use of memory/affect/time/perception.
-
-It does not own identity, evidence, capabilities, or resource authority.
+It should provide natural wording, personality-compatible phrasing, fluent language
+and preservation of the supplied meaning/uncertainty. It must not originate tool
+intents, choose actions, replace the reasoning engine or invent facts. Prepared
+meaning and tool plans follow separate paths; Executive Control handles actions.
+A separate speech-synthesis engine later renders accepted expression into sound.
+Shared runtime optimizations must preserve these distinct logical contracts.
 
 Candidate engines should pass:
 
@@ -682,7 +685,7 @@ Candidate engines should pass:
 - personality regression,
 - memory grounding,
 - modality honesty,
-- tool-intent correctness,
+- prepared-meaning and uncertainty preservation,
 - autonomy behavior,
 - thermal/RAM/latency tests.
 

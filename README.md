@@ -3,7 +3,9 @@
 Local Yuki is an Android foundation for persistent, model-independent identity,
 state and evidence-backed memory. The launcher provides an owner console for
 memories, local notes, sleep/maintenance and encrypted continuity export/restore.
-A conversational engine has not been integrated yet.
+Controls are grouped in menus, and the content adapts to the screen and keyboard.
+The cognitive subsystems prepare meaning; language phrases it and a later voice
+engine will speak it. A conversational engine has not been integrated yet.
 
 Start with [Project Handoff](PROJECT_HANDOFF/README.md), especially
 [Current State](PROJECT_HANDOFF/CURRENT_STATE.md) and

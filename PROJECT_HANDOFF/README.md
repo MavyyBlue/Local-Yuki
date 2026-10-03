@@ -49,3 +49,5 @@ and [implementation handoff](2026-10-02_CONTINUATION_IMPLEMENTATION_HANDOFF.md)
 for deterministic Phases 6–11, later groundwork, developer evidence and remaining
 independent/signed-CI/phone gates. Real model integration is deferred to the deeper
 model-phase discussion requested by the owner.
+
+The latest owner refinement is the [2026-10-03 language and surface handoff](2026-10-03_LANGUAGE_AND_OWNER_SURFACE_HANDOFF.md): grouped controls, screen/keyboard insets and a strict prepared-meaning expression socket.
