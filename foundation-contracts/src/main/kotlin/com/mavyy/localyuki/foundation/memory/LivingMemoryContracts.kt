@@ -7,7 +7,7 @@ import java.time.Instant
 @JvmInline value class LivingMemoryFormatVersion(val value: Int) { init { require(value == 1) } }
 enum class AbstractionLevel { DETAILED, COMPACT, SPARSE, TRACE }
 enum class IndexCoverage { COMPLETE, PARTIAL, UNAVAILABLE }
-enum class RecallBasis { LEXICAL, MOCK }
+enum class RecallBasis { LEXICAL, MOCK, SEMANTIC }
 
 data class EpisodicMemoryView(val memoryId: String, val revisionId: String, val kind: MemoryKind,
     val status: MemoryStatus, val createdAt: Instant, val terms: List<String>, val evidence: List<EvidenceRef>)

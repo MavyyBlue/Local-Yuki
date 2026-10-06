@@ -1,3 +1,5 @@
+> Historical handoff. Current source status, owner-directed verification and freeze removal are recorded in [CURRENT_STATE](CURRENT_STATE.md). Stale CI/assistant requirements below are historical, not active gates.
+
 # Local Yuki — Continuation implementation handoff
 
 Date: 2026-10-02. Starting source: `57c6d173155c39aa3cd92621db4748a80846a7ba`.

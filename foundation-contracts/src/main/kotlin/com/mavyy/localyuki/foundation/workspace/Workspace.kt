@@ -14,8 +14,9 @@ import com.mavyy.localyuki.foundation.temporal.TemporalGroundingSnapshot
 data class YukiTurnContext(val input: String,val inputEvidence: EvidenceRef,val identity: CognitiveIdentityView,
     val time: TemporalGroundingSnapshot,val state: YukiStateSnapshot,val affect: AffectSnapshot,
     val memories: List<GroundedRecallCandidate>,val capabilities: List<CapabilityView>,
-    val interoception: InteroceptiveSnapshot,val uncertainty: Set<String> = emptySet(),val reasoning: String?=null) {
+    val interoception: InteroceptiveSnapshot,val uncertainty: Set<String> = emptySet(),val reasoning: String?=null,val observations:List<RawEvidence> = emptyList()) {
     init { require(MemoryBounds.text(input,4096) && memories.size<=20 && capabilities.size<=16 && uncertainty.size<=16)
+        require(observations.size<=8)
         require(uncertainty.all { it.length in 1..160 } && (reasoning==null || MemoryBounds.text(reasoning,2048))) }
 }
 data class Verification(val grounded: Boolean,val reasons: List<String>)
@@ -42,6 +43,13 @@ class RealityVerification(private val memory: MemoryReader,private val capabilit
             is FoundationResult.Success -> if(input.value.ref.sourceKind!=EvidenceSourceKind.USER_INPUT || input.value.payload!=context.input)
                 reasons+="input is not grounded"
         }
+        for(observation in context.observations) {
+            when(val source=memory.evidence(observation.ref)) {
+                is FoundationResult.Failure -> return source
+                is FoundationResult.Unavailable -> return source
+                is FoundationResult.Success -> if(source.value!=observation)reasons+="observation source changed"
+            }
+        }
         for(candidate in context.memories) {
             when(val current=memory.current(candidate.memory.id)) {
                 is FoundationResult.Failure -> return current
@@ -64,7 +72,7 @@ class RealityVerification(private val memory: MemoryReader,private val capabilit
         return when(val source=memory.evidence(ref)) {
             is FoundationResult.Failure -> source
             is FoundationResult.Unavailable -> source
-            is FoundationResult.Success -> FoundationResult.Success(Verification(result.succeeded && result.capability==CapabilityId.LOCAL_NOTE &&
+            is FoundationResult.Success -> FoundationResult.Success(Verification(source.value.ref.sourceKind==EvidenceSourceKind.TOOL_RESULT &&
                 source.value.ref==ToolEvidenceIdentity.ref(result.actionId,result.capability) &&
                 source.value.payload==result.summary && source.value.capturedAt==result.observedAt,listOf("tool result checked against evidence")))
         }
@@ -122,7 +130,7 @@ class TurnCoordinator(private val verifier: RealityVerification,private val syst
         state=c.state.copy(intentions=c.state.intentions.toList(),topics=c.state.topics.toList(),interactions=c.state.interactions.toList()),
         memories=c.memories.map { m -> m.copy(memory=m.memory.copy(current=m.memory.current.copy(evidence=m.memory.current.evidence.toList())),
             surface=m.surface.copy(terms=m.surface.terms.toList()),matchedTerms=m.matchedTerms.toList()) },
-        capabilities=c.capabilities.toList(),uncertainty=c.uncertainty.toSet())
+        capabilities=c.capabilities.toList(),uncertainty=c.uncertainty.toSet(),observations=c.observations.toList())
     fun respond(context: YukiTurnContext): FoundationResult<Expression> {
         when(val check=verifier.verify(context)) {
             is FoundationResult.Failure -> return check
@@ -141,7 +149,7 @@ class TurnCoordinator(private val verifier: RealityVerification,private val syst
                 is FoundationResult.Failure -> return reasoning
                 is FoundationResult.Unavailable -> return reasoning
                 is FoundationResult.Success -> {
-                    val permitted=context.memories.flatMap { it.memory.current.evidence }.toSet()+context.inputEvidence
+                    val permitted=context.memories.flatMap { it.memory.current.evidence }.toSet()+context.inputEvidence+context.observations.map { it.ref }
                     if(reasoning.value.evidence.isEmpty() || reasoning.value.evidence.any { it !in permitted }) return FoundationResult.Failure(FailureCategory.REJECTED)
                     integrated=context.copy(reasoning=reasoning.value.plan)
                 }
@@ -155,7 +163,7 @@ class TurnCoordinator(private val verifier: RealityVerification,private val syst
             is FoundationResult.Unavailable -> return composed
             is FoundationResult.Success -> composed.value
         }
-        val permitted=context.memories.flatMap { it.memory.current.evidence }.toSet()+context.inputEvidence
+        val permitted=context.memories.flatMap { it.memory.current.evidence }.toSet()+context.inputEvidence+context.observations.map { it.ref }
         if(meaning.evidence.any { it !in permitted }) return FoundationResult.Failure(FailureCategory.REJECTED)
         val groundedEvidence=meaning.evidence.toSet()
         val request=ExpressionRequest(meaning.copy(points=meaning.points.toList(),evidence=meaning.evidence.toList(),uncertainty=meaning.uncertainty.toSet()))

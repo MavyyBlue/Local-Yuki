@@ -163,21 +163,18 @@ class RuntimeAndVaultTest {
         assertFalse(destination.exists());assertFalse(File(destination.parentFile,"${destination.name}.partial").exists())
         file.delete()
     }
-    @Test fun modelOrganManagerEnforcesGateAndReportsMissingRuntimeWithoutClaimingLoad() {
-        val g=ResourceGovernor()
-        g.observe(DeviceResources(4096*ResourceGovernor.MIB,2048*ResourceGovernor.MIB,80,true,ThermalPressure.NORMAL,true,now))
+    @Test fun malformedModelIsInspectableButNeverAdmittedAndHashChangesAreRejected() {
+        brain().use { assertTrue(it.open()) }
         val header=ByteBuffer.allocate(32).order(ByteOrder.LITTLE_ENDIAN).put(byteArrayOf(0x47,0x47,0x55,0x46)).putInt(3).putLong(1).putLong(1).putLong(0).array()
-        ModelOrganManager(context,g).use { manager ->
-            assertEquals(FoundationResult.Failure(FailureCategory.REJECTED),manager.importOwnerModel(ByteArrayInputStream(header),ModelRole.SYSTEM_ONE,now))
+        ModelSubsystem(context,ResourceGovernor()).use { models ->
+            val model=ok(models.importFile(ByteArrayInputStream(header),ModelRole.SYSTEM_ONE,now))
+            assertEquals("INCOMPATIBLE",model.manifest.getString("status"))
+            assertTrue(models.admit(model.id,ModelRole.SYSTEM_ONE,now) is FoundationResult.Failure)
+            assertNull(models.activeHash(ModelRole.SYSTEM_ONE))
+            File(context.filesDir,"model-organs/${model.id}").appendBytes(byteArrayOf(1))
+            assertTrue(models.admit(model.id,ModelRole.SYSTEM_ONE,now) is FoundationResult.Failure)
+            assertTrue(models.lastFailure.contains("hash/size changed"))
         }
-        ModelOrganManager(context,g,foundationCertified={true}).use { manager ->
-            val model=ok(manager.importOwnerModel(ByteArrayInputStream(header),ModelRole.SYSTEM_ONE,now))
-            assertEquals(FoundationResult.Unavailable(UnavailableReason.NOT_IMPLEMENTED),manager.prepare(model.id,now))
-            val file=File(context.filesDir,"model-organs/${model.id}")
-            file.appendBytes(byteArrayOf(1))
-            assertEquals(FoundationResult.Failure(FailureCategory.CONFLICT),manager.prepare(model.id,now))
-            file.delete()
-        }
+        db().use { sql->sql.rawQuery("SELECT COUNT(*) FROM organ_receipt WHERE accepted=0",null).use { it.moveToFirst();assertEquals(2,it.getInt(0)) } }
     }
-
 }

@@ -9,3 +9,5 @@ local.properties
 *.aab
 *.jks
 *.keystore
+
+.cxx/

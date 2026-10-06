@@ -1,3 +1,5 @@
+> Historical handoff. Current source status, owner-directed verification and freeze removal are recorded in [CURRENT_STATE](CURRENT_STATE.md). Stale CI/assistant requirements below are historical, not active gates.
+
 # Local Yuki — sequential continuation architecture handoff
 
 Owner authorization: Mavyy's current instruction to continue through all phases,

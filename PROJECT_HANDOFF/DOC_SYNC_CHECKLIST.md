@@ -1,19 +1,8 @@
-# Local Yuki — Doc Sync Checklist
+# Documentation checks
 
-Run after a slice is accepted/certified.
-
-- [ ] Record accepted commit SHA / candidate identifier.
-- [ ] Record latest successful relevant CI run.
-- [ ] Record app version/versionCode if changed.
-- [ ] Record database/schema version if changed.
-- [ ] Record signing lineage status if relevant.
-- [ ] Update `CURRENT_STATE.md` with only verified implementation facts.
-- [ ] Update `ACTIVE_SLICE.md` to the next authorized bounded slice.
-- [ ] Update `ROADMAP.md` phase/gate status.
-- [ ] Add a concise certified entry to `CHANGELOG.md`.
-- [ ] Archive Yuki/Akari/Mio slice handoffs under `PROJECT_HANDOFF/HISTORY/`.
-- [ ] Confirm the Model Freeze Gate remains correctly OPEN/CLOSED.
-- [ ] Confirm no model-specific implementation detail accidentally became app-owned architecture.
-- [ ] Confirm autonomy/capability rules remain consistent with the North Star.
-- [ ] Confirm substrate opacity remains intact.
-- [ ] Confirm unresolved defects/risks are explicitly carried forward.
+- Current implementation/status agrees with source and migrations.
+- README, ROADMAP, CURRENT_STATE, ACTIVE_SLICE, CHANGELOG and current architecture name real adapters and current scope gaps.
+- Automated, exact-source CI and owner device acceptance are recorded separately; baseline green CI is not pending and does not certify a new tree.
+- Historical assistant gates remain provenance only; no Mio/Akari participation or artificial model freeze blocks current status.
+- Delivery preserves signing, existing databases and evidence; artifacts identify exact source/payload hashes and mobile workflow steps.
+- Galaxy/second-body acceptance is a concrete owner checklist, not an assertion of host proof.

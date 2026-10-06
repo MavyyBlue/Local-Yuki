@@ -13,11 +13,12 @@ data class ComputeCapabilities(val abis: List<String> = emptyList(),val cpuThrea
     init { require(abis.size<=8 && abis.all { it.length in 1..64 } && (cpuThreads==null || cpuThreads in 1..256)) }
 }
 data class DeviceResources(val totalBytes: Long,val availableBytes: Long,val batteryPercent: Int?,
-    val charging: Boolean,val thermal: ThermalPressure,val foreground: Boolean,val capturedAt: Instant,val compute: ComputeCapabilities=ComputeCapabilities()) {
+    val charging: Boolean,val thermal: ThermalPressure,val foreground: Boolean,val capturedAt: Instant,val compute: ComputeCapabilities=ComputeCapabilities(),
+    val lowMemory:Boolean=false,val powerSave:Boolean=false,val competingForeground:Boolean=false) {
     init { require(totalBytes>0 && availableBytes in 0..totalBytes && (batteryPercent==null || batteryPercent in 0..100)) }
 }
 data class Workload(val id: String,val memoryBytes: Long,val maxDurationMillis: Long,val neural: Boolean=false) {
-    init { require(MemoryBounds.id(id) && memoryBytes>0 && maxDurationMillis in 1..10_000) }
+    init { require(MemoryBounds.id(id) && memoryBytes>0 && maxDurationMillis in 1..60_000) }
 }
 data class WorkloadLease(val workload: Workload,val expiresAt: Instant)
 data class ResourceState(val engagement: Engagement,val pressure: ResourcePressure,val activeWorkloads: Int)
@@ -36,8 +37,8 @@ class ResourceGovernor {
         val r=body
         val critical=faulted || residency.faulted() || r==null || Duration.between(r.capturedAt,now).seconds !in 0..30 ||
             r.availableBytes<128*MIB || r.thermal>=ThermalPressure.SEVERE || !r.charging && (r.batteryPercent ?: 0)<=5
-        val low=!critical && (!r.foreground || !r.charging && (r.batteryPercent ?: 0)<=20)
-        val constrained=r==null || r.availableBytes<512*MIB || r.thermal>=ThermalPressure.MODERATE
+        val low=!critical && (!r.foreground || r.competingForeground || r.powerSave || !r.charging && (r.batteryPercent ?: 0)<=20)
+        val constrained=r==null || r.lowMemory || r.availableBytes<512*MIB || r.thermal>=ThermalPressure.MODERATE
         val engagement=when {
             critical -> Engagement.RECOVERY
             low -> Engagement.LOW_POWER_AWARE
@@ -50,17 +51,18 @@ class ResourceGovernor {
     }
     @Synchronized fun reserve(workload: Workload,now: Instant): FoundationResult<WorkloadLease> {
         val state=state(now);val r=body ?: return FoundationResult.Unavailable(UnavailableReason.DEPENDENCY_UNAVAILABLE)
-        if (workload.id in leases || leases.size>=MAX_LEASES) return FoundationResult.Failure(FailureCategory.CONFLICT)
+        if (workload.id in leases || leases.size>=MAX_LEASES || workload.neural && leases.values.any { it.workload.neural }) return FoundationResult.Failure(FailureCategory.CONFLICT)
         if (state.engagement==Engagement.RECOVERY) return FoundationResult.Failure(FailureCategory.REJECTED)
         val cheap=workload.memoryBytes<=16*MIB && workload.maxDurationMillis<=1_000 && !workload.neural
         if (state.engagement==Engagement.LOW_POWER_AWARE && !cheap || workload.neural &&
-            (r.thermal==ThermalPressure.UNKNOWN || state.pressure!=ResourcePressure.NORMAL || r.batteryPercent==null))
+            (r.thermal==ThermalPressure.UNKNOWN || state.pressure==ResourcePressure.CONSTRAINED || r.batteryPercent==null))
             return FoundationResult.Failure(FailureCategory.REJECTED)
         val reserved=leases.values.sumOf { it.workload.memoryBytes }+residency.reservedBytes()
         if (workload.memoryBytes>r.availableBytes/2-reserved) return FoundationResult.Failure(FailureCategory.REJECTED)
         val lease=WorkloadLease(workload,now.plusMillis(workload.maxDurationMillis))
         leases[workload.id]=lease;return FoundationResult.Success(lease)
     }
+    @Synchronized fun profile(now:Instant,measuredPeak:Long=0):SafeRuntimeProfile? = body?.let { AdaptiveProfile.derive(it,now,measuredPeak) }
     @Synchronized fun release(id: String) { leases.remove(id) }
     @Synchronized fun reportFault() { faulted=true }
     @Synchronized fun quiesce() { leases.clear() }

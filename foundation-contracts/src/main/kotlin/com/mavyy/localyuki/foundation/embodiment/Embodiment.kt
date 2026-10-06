@@ -5,7 +5,7 @@ import com.mavyy.localyuki.foundation.memory.MemoryBounds
 import com.mavyy.localyuki.foundation.provenance.EvidenceRef
 import java.time.Instant
 
-enum class CapabilityId { LOCAL_NOTE, SCREEN, NOTIFICATIONS, SPEECH_INPUT, SPEECH_OUTPUT }
+enum class CapabilityId { LOCAL_NOTE, SCREEN, NOTIFICATIONS, SPEECH_INPUT, SPEECH_OUTPUT, APP_LAUNCH, DEVICE_NAVIGATION, UI_INTERACTION, MEDIA_CONTROL, LOCKDOWN_CONTROL, DOCUMENTS, COMPANION, CONVERSATION_NOTIFY, IMAGE_TEXT }
 data class CapabilityPolicy(val enabled: Boolean=false, val allowedPackages: Set<String> = emptySet(),
     val deniedPackages: Set<String> = emptySet()) {
     init { require(allowedPackages.size<=32 && deniedPackages.size<=32)
@@ -20,7 +20,7 @@ interface CapabilityReader {
     fun permits(capability: CapabilityId, targetPackage: String?): FoundationResult<Boolean>
 }
 data class ActionIntent(val id: String, val capability: CapabilityId, val payload: String, val targetPackage: String?=null) {
-    init { require(MemoryBounds.id(id) && MemoryBounds.text(payload,512))
+    init { require(MemoryBounds.id(id) && MemoryBounds.text(payload,if(capability==CapabilityId.LOCKDOWN_CONTROL)65536 else 512))
         require(targetPackage==null || targetPackage.length<=160 && targetPackage.matches(Regex("[A-Za-z0-9_.]+"))) }
 }
 data class ToolObservation(val actionId: String, val capability: CapabilityId, val succeeded: Boolean,

@@ -32,6 +32,7 @@ def main() -> int:
         ":foundation-contracts:check",
         ":app:testDebugUnitTest",
         ":app:assembleDebug",
+        ":app:lintDebug",
     ]
     wrapper = "gradlew.bat" if os.name == "nt" else "./gradlew"
     return subprocess.call([wrapper, "--no-daemon", *tasks], cwd=root, env=environment)

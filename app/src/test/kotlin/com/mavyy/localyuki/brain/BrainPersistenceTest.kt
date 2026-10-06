@@ -118,9 +118,9 @@ class BrainPersistenceTest {
         db().use { sql -> com.mavyy.localyuki.continuity.dropAfterPhaseFive(sql);sql.version=4 }
         AffectStore(context,temporal,MemoryStore(context,temporal).reader()).use { assertFalse(ok(it.open())) }
         db().use { sql ->
-            assertEquals(8,sql.version)
+            assertEquals(ContinuitySchema.VERSION,sql.version)
             sql.rawQuery("SELECT payload FROM memory_evidence WHERE evidence_id='input'",null).use { assertTrue(it.moveToFirst());assertEquals("A shared project",it.getString(0)) }
-            sql.rawQuery("SELECT count(*) FROM continuity_migration_history",null).use { it.moveToFirst();assertEquals(4,it.getInt(0)) }
+            sql.rawQuery("SELECT count(*) FROM continuity_migration_history",null).use { it.moveToFirst();assertEquals(ContinuitySchema.VERSION-4,it.getInt(0)) }
         }
         context.deleteDatabase(ContinuitySchema.NAME)
         MemoryStore(context,temporal).use(::seed)

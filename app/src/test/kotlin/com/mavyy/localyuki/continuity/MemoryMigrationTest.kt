@@ -61,7 +61,7 @@ class MemoryMigrationTest {
             LivingMemoryStore(context,temporal,store.reader()).use { assertEquals(LivingMemoryStore.Start.INITIALIZED,it.open()) }
         }
         db().use { sql ->
-            assertEquals(8,sql.version)
+            assertEquals(ContinuitySchema.VERSION,sql.version)
             assertEquals("yuki-aster",scalar(sql,"SELECT self_id FROM identity_anchor"))
             assertEquals("9",scalar(sql,"SELECT count(*) FROM personality_facet"))
             assertEquals("1",scalar(sql,"SELECT count(*) FROM memory_thread"))
@@ -101,13 +101,13 @@ class MemoryMigrationTest {
         }
         MemoryStore(context,temporal).use { assertEquals(MemoryStore.Start.INITIALIZED,it.open()) }
         db().use { sql ->
-            assertEquals(8,sql.version)
+            assertEquals(ContinuitySchema.VERSION,sql.version)
             assertEquals("yuki-aster",scalar(sql,"SELECT self_id FROM identity_anchor"))
             assertEquals("phase3",scalar(sql,"SELECT project_id FROM yuki_state"))
             assertEquals("2",scalar(sql,"SELECT revision FROM yuki_state"))
             assertEquals("1",scalar(sql,"SELECT count(*) FROM state_interaction"))
             assertEquals("9",scalar(sql,"SELECT count(*) FROM personality_facet"))
-            assertEquals("6",scalar(sql,"SELECT count(*) FROM continuity_migration_history"))
+            assertEquals((ContinuitySchema.VERSION-2).toString(),scalar(sql,"SELECT count(*) FROM continuity_migration_history"))
             assertEquals(MemorySchema.MIGRATION_ID,scalar(sql,"SELECT migration_id FROM continuity_migration_history WHERE to_version=3"))
         }
     }

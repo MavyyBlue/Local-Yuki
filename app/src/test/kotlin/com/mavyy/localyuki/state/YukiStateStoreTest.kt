@@ -149,9 +149,9 @@ class YukiStateStoreTest {
         ContinuityStore(context).use { assertEquals(expected, it.open().reader.read()) }
         YukiStateStore(context, temporal).use { assertEquals(YukiStateStore.Start.INITIALIZED, it.open().status) }
         db().use { db ->
-            assertEquals(8, db.version)
+            assertEquals(ContinuitySchema.VERSION, db.version)
             db.rawQuery("SELECT migration_id FROM continuity_migration_history ORDER BY migration_id", null).use { c ->
-                assertEquals(7, c.count)
+                assertEquals(ContinuitySchema.VERSION-1, c.count)
                 c.moveToFirst(); assertEquals("2026-09-24-memory-authority-v1", c.getString(0))
                 c.moveToNext(); assertEquals("2026-09-24-yuki-state-v1", c.getString(0))
                 c.moveToNext(); assertEquals("2026-09-25-living-memory-v1", c.getString(0))

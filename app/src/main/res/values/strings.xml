@@ -1,0 +1,1 @@
+<resources><string name="accessibility_description">Local Yuki can observe foreground application identity and structured screen nodes, excluding password fields, and perform owner-enabled navigation and node actions. Granting Android access alone does not enable Yuki’s capabilities. Review capability controls in Local Yuki. Screen content stays local.</string></resources>

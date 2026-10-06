@@ -1,0 +1,228 @@
+{
+  "scope": "Real external weights through shipping JNI on Linux/JVM, NOT Galaxy benchmark or integrated Android model admission/replacement",
+  "runtime_commit": "74d4f5b041ad837153b0e90fc864b8290e01d8d5",
+  "context": 2048,
+  "threads": 2,
+  "batch": 64,
+  "deadline_ms": 60000,
+  "max_tokens": 256,
+  "peak_warning": "ru_maxrss includes JVM and previous runs; phone receipts measure isolated Android process",
+  "behavior_warning": "Representative outputs only; 0.5B reasoning wording is weak and one host run took46s, exceeding the app30s envelope. Model intelligence/calibration and resource admission must be evaluated on the phone. Previous full-prompt run under contention timed out and failed closed.",
+  "models": [
+    {
+      "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+      "filename": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+      "bytes": 491400032,
+      "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+      "hub_revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+      "etag": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db"
+    },
+    {
+      "repo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+      "filename": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "bytes": 1117320736,
+      "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+      "hub_revision": "91cad51170dc346986eccefdc2dd33a9da36ead9",
+      "etag": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e"
+    },
+    {
+      "repo": "ggml-org/bge-small-en-v1.5-Q8_0-GGUF",
+      "filename": "bge-small-en-v1.5-q8_0.gguf",
+      "bytes": 36685152,
+      "sha256": "f046db1dc724cf4f6f0a0c5917e922823b73eb1d27b8f9a9c2797f7866974804",
+      "hub_revision": "f2068edd9b54f2a369549ccc71f70ed273a2a801",
+      "etag": "f046db1dc724cf4f6f0a0c5917e922823b73eb1d27b8f9a9c2797f7866974804"
+    }
+  ],
+  "results": [
+    {
+      "role": "SYSTEM_ONE",
+      "model": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+      "startup_ms": 1206,
+      "inference_ms": 14791,
+      "metrics": [
+        630167424,
+        485452288,
+        706420736,
+        2048,
+        54,
+        0
+      ],
+      "actual_output": {
+        "route": "RESPOND",
+        "confidence": 99,
+        "salience": 0,
+        "intent": "greeting",
+        "affect": "neutral",
+        "meaning": [
+          "Hello, Mavyy. I am glad you are here."
+        ],
+        "uncertainty": [],
+        "sources": [
+          "input"
+        ],
+        "updates": []
+      },
+      "log": "real-one-production.log"
+    },
+    {
+      "role": "SYSTEM_ONE",
+      "model": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "startup_ms": 595,
+      "inference_ms": 12202,
+      "metrics": [
+        1777088000,
+        1111370240,
+        1983299584,
+        2048,
+        53,
+        0
+      ],
+      "actual_output": {
+        "route": "RESPOND",
+        "confidence": 90,
+        "salience": 30,
+        "intent": "conversation",
+        "affect": "neutral",
+        "meaning": [
+          "Hello, Mavyy. I am glad you are here."
+        ],
+        "uncertainty": [],
+        "sources": [
+          "input"
+        ],
+        "updates": []
+      },
+      "log": "real-one-production.log"
+    },
+    {
+      "role": "SYSTEM_TWO",
+      "model": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+      "startup_ms": 1133,
+      "inference_ms": 46494,
+      "metrics": [
+        630167424,
+        485452288,
+        702709760,
+        2048,
+        39,
+        0
+      ],
+      "actual_output": {
+        "points": [
+          "The headache is not certain.",
+          "The cause remains uncertain."
+        ],
+        "uncertainty": [
+          "The cause remains uncertain."
+        ],
+        "sources": [
+          "input"
+        ],
+        "actions": []
+      },
+      "log": "real-two-shipping-final.log"
+    },
+    {
+      "role": "SYSTEM_TWO",
+      "model": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "startup_ms": 1260,
+      "inference_ms": 11741,
+      "metrics": [
+        1777088000,
+        1111370240,
+        1967255552,
+        2048,
+        31,
+        0
+      ],
+      "actual_output": {
+        "points": [
+          "The cause of a headache is uncertain."
+        ],
+        "uncertainty": [
+          "The cause of a headache is uncertain."
+        ],
+        "sources": [
+          "input"
+        ],
+        "actions": []
+      },
+      "log": "real-two-shipping-final.log"
+    },
+    {
+      "role": "LANGUAGE",
+      "model": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+      "startup_ms": 254,
+      "inference_ms": 2266,
+      "metrics": [
+        630167424,
+        485452288,
+        709849088,
+        2048,
+        22,
+        0
+      ],
+      "actual_output": {
+        "text": "Hello, Mavyy. I am glad you are here.",
+        "pointIds": [
+          0
+        ]
+      },
+      "log": "real-language-production.log"
+    },
+    {
+      "role": "EMBEDDING",
+      "dimensions": 896,
+      "related_cosine": 0.9390262927940611,
+      "unrelated_cosine": 0.7925627875708372,
+      "squared_norm": 1.0000000302277463,
+      "log": "real-language-production.log"
+    },
+    {
+      "role": "LANGUAGE",
+      "model": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "startup_ms": 560,
+      "inference_ms": 3885,
+      "metrics": [
+        1777088000,
+        1111370240,
+        1997897728,
+        2048,
+        21,
+        0
+      ],
+      "actual_output": {
+        "text": "Hello, Mavyy. I am glad you are here.",
+        "pointIds": [
+          0
+        ]
+      },
+      "log": "real-language-production.log"
+    },
+    {
+      "role": "EMBEDDING",
+      "dimensions": 1536,
+      "related_cosine": 0.9435168053896839,
+      "unrelated_cosine": 0.8924625174264702,
+      "squared_norm": 1.0000000133381928,
+      "log": "real-language-production.log"
+    },
+    {
+      "role": "EMBEDDING",
+      "dimensions": 384,
+      "related_cosine": 0.736720105917982,
+      "unrelated_cosine": 0.2505766206371618,
+      "squared_norm": 0.9999999988173691,
+      "log": "real-embedding-final.log"
+    },
+    {
+      "role": "EMBEDDING",
+      "dimensions": 896,
+      "related_cosine": 0.9390262927940611,
+      "unrelated_cosine": 0.7925627875708372,
+      "squared_norm": 1.0000000302277463,
+      "log": "real-embedding-final.log"
+    }
+  ]
+}

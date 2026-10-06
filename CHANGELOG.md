@@ -1,6 +1,15 @@
 # Local Yuki — Changelog
 
-Only synchronized/certified project changes belong here. Candidate work that has not passed the required gates should remain in handoffs or active-slice notes.
+Current entries distinguish implementation, automated verification, exact-source CI and owner acceptance. Historical certification terminology is preserved below.
+
+## 2026-10-06 — Owner-directed real runtime and autonomy implementation
+
+- Add vendored llama.cpp b5046 CPU JNI, private isolated inference, bounded GGUF inspection, versioned adapter/role lifecycle, measured admission and immutable receipts. Remove artificial model freeze and obsolete frozen manager.
+- Integrate real typed System One/Two and prepared-meaning expression, semantic embeddings, shared affect/intent processing, durable life/opinion/reflection records and scheduled action proposals.
+- Add measured adaptive profiles, one-neural-lease concurrency, native deadlines/pressure cancellation, real owner grant-aware Android executors, offline speech/TTS/visible wake phrase, bundled OCR and persisted bounded initiative jobs.
+- Add mutually certificate-authenticated Lockdown1.8 typed bridge, state-digest/idempotency integrity and safe existing-key integration.
+- Migrate physical DB8→9; support every historical Vault schema1–9 with private candidate validation, fresh-body authority/role reset and atomic restoration. Expand authority, migration, failure and restart verification.
+- Final local results, exact resulting source/CI and source ZIP hashes accompany delivery. Physical Galaxy/second-phone acceptance remains pending. Host real-engine proof is separate from Android model acceptance. See current architecture for implementation scope gaps.
 
 ## 2026-09-25 — Phase 4 certified: Memory authority and provenance completion
 

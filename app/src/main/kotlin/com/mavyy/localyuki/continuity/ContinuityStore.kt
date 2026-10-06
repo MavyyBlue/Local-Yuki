@@ -14,7 +14,7 @@ import com.mavyy.localyuki.foundation.identity.*
 import com.mavyy.localyuki.foundation.personality.*
 
 internal object ContinuitySchema {
-    const val VERSION = 8 // Physical schema, independent of semantic formats.
+    const val VERSION = 9 // Physical schema, independent of semantic formats.
     const val NAME = "continuity.db"
 
     fun create(db: SQLiteDatabase) {
@@ -30,6 +30,7 @@ internal object ContinuitySchema {
         EmbodimentSchema.create(db)
         RecoverySchema.create(db)
         AdmissionSchema.create(db)
+        LifeSchema.create(db)
     }
 }
 
@@ -93,7 +94,7 @@ internal class ContinuityHelper(context: Context, private val newInstall: Boolea
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        ContinuityMigrations(listOf(StateSchema.Migration, MemorySchema.Migration, LivingMemorySchema.Migration, AffectSchema.Migration, EmbodimentSchema.Migration, RecoverySchema.Migration, AdmissionSchema.Migration)).apply(db, oldVersion, newVersion)
+        ContinuityMigrations(listOf(StateSchema.Migration, MemorySchema.Migration, LivingMemorySchema.Migration, AffectSchema.Migration, EmbodimentSchema.Migration, RecoverySchema.Migration, AdmissionSchema.Migration, LifeSchema.Migration)).apply(db, oldVersion, newVersion)
     }
 
     override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {

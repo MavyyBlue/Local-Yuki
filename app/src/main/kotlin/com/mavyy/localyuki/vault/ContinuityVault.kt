@@ -26,7 +26,7 @@ class ContinuityVault(context: Context) {
     private val app=context.applicationContext
     companion object {
         const val MAX_BYTES=64L*1024*1024
-        private const val MAX_ROWS=20_000
+        private const val MAX_ROWS=200_000
         private val MAGIC="YUKIVAULT1".toByteArray(Charsets.US_ASCII)
         private const val HEADER_BYTES=10+16+12+4
     }
@@ -78,6 +78,11 @@ class ContinuityVault(context: Context) {
         "SELECT name,type,sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY name",null).use { c ->
         buildMap { while(c.moveToNext()) put(c.getString(0),c.getString(1) to c.getString(2)) }
     }
+    private fun migrate(file:File,declaredVersion:Int) {
+        SQLiteDatabase.openDatabase(file.path,null,SQLiteDatabase.OPEN_READONLY).use { require(it.version==declaredVersion && declaredVersion in 1..ContinuitySchema.VERSION) }
+        val context=CandidateContext(app,file)
+        ContinuityHelper(context,false).use { helper ->require(helper.writableDatabase.version==ContinuitySchema.VERSION) }
+    }
     private fun validate(file: File) {
         val reference=File(app.cacheDir,"vault-schema-${java.util.UUID.randomUUID()}.db")
         try {
@@ -110,6 +115,23 @@ class ContinuityVault(context: Context) {
                     cursor=result.value.lastOrNull()?.id ?: cursor
                 } while(result.value.size==100)
                 SQLiteDatabase.openDatabase(file.path,null,SQLiteDatabase.OPEN_READONLY).use { db ->
+                    db.rawQuery("SELECT id,kind,topic,content,evidence,created,previous_id FROM life_record",null).use { rows ->
+                        var total=0
+                        while(rows.moveToNext()) {
+                            require(++total<=MAX_ROWS);val id=rows.getString(0);require(MemoryBounds.id(id))
+                            com.mavyy.localyuki.presence.LifeKind.valueOf(rows.getString(1));require(MemoryBounds.text(rows.getString(2),128) && MemoryBounds.text(rows.getString(3),2048));java.time.Instant.parse(rows.getString(5))
+                            val evidence=org.json.JSONArray(rows.getString(4));require(evidence.length() in 1..32)
+                            for(i in 0 until evidence.length()){val e=evidence.getJSONObject(i);check(memory.getEvidence(EvidenceRef(e.getString("id"),EvidenceSourceKind.valueOf(e.getString("kind")))) is FoundationResult.Success)}
+                            if(!rows.isNull(6))db.rawQuery("SELECT kind,topic,created FROM life_record WHERE id=?",arrayOf(rows.getString(6))).use { prior ->
+                                require(prior.moveToFirst() && prior.getString(0)==rows.getString(1) && prior.getString(1)==rows.getString(2) && java.time.Instant.parse(prior.getString(2))<=java.time.Instant.parse(rows.getString(5))) }
+                        }
+                    }
+                    db.rawQuery("SELECT previous_id,COUNT(*) FROM life_record WHERE previous_id IS NOT NULL GROUP BY previous_id HAVING COUNT(*)>1",null).use { require(it.count==0) }
+                    db.rawQuery("SELECT json FROM autonomy_policy",null).use { require(it.moveToFirst());com.mavyy.localyuki.presence.AutonomyPolicy.parse(it.getString(0));require(!it.moveToNext()) }
+                    db.rawQuery("SELECT id,json FROM organ_manifest",null).use { rows ->while(rows.moveToNext()) {
+                        val j=org.json.JSONObject(rows.getString(1));require(j.getInt("version")==1 && j.getString("id")==rows.getString(0) && j.getString("sha256").matches(Regex("[0-9a-f]{64}")))
+                        require(j.getLong("fileBytes") in 1..com.mavyy.localyuki.admission.ModelFiles.MAX_BYTES);com.mavyy.localyuki.foundation.admission.ModelRole.valueOf(j.getString("role"))
+                    } }
                     db.rawQuery("SELECT evidence_id,source_kind FROM memory_evidence",null).use { c ->
                         while(c.moveToNext()) check(memory.getEvidence(EvidenceRef(c.getString(0),EvidenceSourceKind.valueOf(c.getString(1)))) is FoundationResult.Success)
                     }
@@ -122,10 +144,12 @@ class ContinuityVault(context: Context) {
         target.parentFile?.mkdirs()
         val candidate=File(target.parentFile,"vault-candidate-${java.util.UUID.randomUUID()}.db")
         return try {
+            var declaredVersion=0
             input.use { source ->
                 val header=ByteArray(HEADER_BYTES)
                 DataInputStream(source).readFully(header)
-                require(header.copyOfRange(0,10).contentEquals(MAGIC) && ByteBuffer.wrap(header,38,4).int==ContinuitySchema.VERSION)
+                require(header.copyOfRange(0,10).contentEquals(MAGIC) && ByteBuffer.wrap(header,38,4).int in 1..ContinuitySchema.VERSION)
+                declaredVersion=ByteBuffer.wrap(header,38,4).int
                 val crypto=cipher(Cipher.DECRYPT_MODE,password,header.copyOfRange(10,26),header.copyOfRange(26,38),header)
                 candidate.outputStream().use { output ->
                     val buffer=ByteArray(64*1024);var read=0L;var written=0L
@@ -134,7 +158,26 @@ class ContinuityVault(context: Context) {
                     val last=crypto.doFinal();written+=last.size;require(written in 1..MAX_BYTES);output.write(last);output.fd.sync()
                 }
             }
+            migrate(candidate,declaredVersion)
             validate(candidate)
+            SQLiteDatabase.openDatabase(candidate.path,null,SQLiteDatabase.OPEN_READWRITE).use { db ->
+                db.beginTransaction()
+                try {
+                    // Admission is body-specific. Preserve receipts/role metadata, never activate old weights or grants.
+                    db.execSQL("DELETE FROM organ_role")
+                    db.execSQL("DELETE FROM semantic_vector")
+                    db.execSQL("DELETE FROM body_signal")
+                    db.execSQL("UPDATE capability_policy SET enabled=0,revision=revision+1 WHERE capability_id!='LOCAL_NOTE'")
+                    db.rawQuery("SELECT id,json FROM organ_manifest",null).use { rows->
+                        val manifests=mutableListOf<Pair<String,String>>()
+                        while(rows.moveToNext()) { val j=org.json.JSONObject(rows.getString(1));j.put("status","REQUIRES_READMISSION");manifests+=rows.getString(0) to j.toString() }
+                        manifests.forEach { db.execSQL("UPDATE organ_manifest SET json=? WHERE id=?",arrayOf(it.second,it.first)) }
+                    }
+                    val policy=db.rawQuery("SELECT json FROM autonomy_policy",null).use { it.moveToFirst();org.json.JSONObject(it.getString(0)) }
+                    policy.put("enabled",false);db.execSQL("UPDATE autonomy_policy SET json=?",arrayOf(policy.toString()))
+                    db.setTransactionSuccessful()
+                } finally { db.endTransaction() }
+            }
             // Preserve original bytes on all failed restores; retain one owner recovery backup on success.
             check(listOf("-wal","-journal").all { !File(target.path+it).exists() || File(target.path+it).length()==0L })
             if(target.exists()) {

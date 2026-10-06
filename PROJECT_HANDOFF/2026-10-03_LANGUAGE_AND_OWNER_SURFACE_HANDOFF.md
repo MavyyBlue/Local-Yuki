@@ -1,3 +1,5 @@
+> Historical handoff. Current source status, owner-directed verification and freeze removal are recorded in [CURRENT_STATE](CURRENT_STATE.md). Stale CI/assistant requirements below are historical, not active gates.
+
 # Local Yuki — Language role and adaptive owner surface
 
 Owner clarification, 2026-10-03: the subsystems collectively form the brain; the

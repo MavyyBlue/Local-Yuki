@@ -78,6 +78,7 @@ class BootstrapActivity : Activity() {
         root.requestApplyInsets()
         val header=LinearLayout(this).apply { gravity=Gravity.CENTER_VERTICAL }
         header.addView(label("Local Yuki",28f),LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1f))
+        header.addView(button("Stop") { com.mavyy.localyuki.inference.NativeSupervisor.cancel();com.mavyy.localyuki.embodiment.LocalVoice.stop();show("Cognition cancellation requested.") })
         header.addView(button("Menu") { openMenu() })
         column.addView(header)
         status=label("Opening continuity…",14f);column.addView(status)
@@ -89,21 +90,30 @@ class BootstrapActivity : Activity() {
             minLines=2;maxLines=6
         }
         column.addView(input,LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT))
-        column.addView(button("Save message") {
+        column.addView(button("Send") {
             val text=input.text.toString().trim();task {
                 when(val result=brain.saveInput(text)) {
-                    is FoundationResult.Success -> show("Message saved. Language expression is not connected yet.")
+                    is FoundationResult.Success -> {
+                        show("Yuki is thinking within the current resource budget…")
+                        when(val reply=brain.converse(result.value)) {
+                            is FoundationResult.Success-> { lastExpression=reply.value.text;show(reply.value.text) }
+                            else->show("Your message is saved. Select and admit compatible System One and Language models in Models; System Two is needed for deeper reasoning. Cognition may also be deferred by resources or a rejected structured response.")
+                        }
+                    }
                     else -> showFailure(result)
                 }
             }
         })
         column.addView(button("Memory & note actions") { openMessageActions() })
-        message=label("Foundation mode · Your messages stay here. Models are not connected yet.",14f)
+        message=label("Your conversation and Yuki’s continuity stay on this device. Connect admitted organs in Models.",14f)
         message.accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
         column.addView(message)
         memories=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL };column.addView(memories)
         task { brain=BrainRuntime(applicationContext);if(!brain.open()) show("Continuity is unavailable. Existing data has been preserved.")
-            BackgroundMaintenance.restore(applicationContext) }
+            BackgroundMaintenance.restore(applicationContext)
+            val history=brain.conversationHistory();if(history.isNotEmpty())show(history.joinToString("\n\n"))
+            com.mavyy.localyuki.embodiment.LocalVoice.initialize(applicationContext)
+            val policy=brain.life.policy();com.mavyy.localyuki.scheduler.PresenceScheduling.configure(applicationContext,policy is FoundationResult.Success&&policy.value.enabled) }
     }
     private fun button(title: String,operation: () -> Unit)=Button(this).apply {
         text=title;isAllCaps=false;minHeight=dp(48);setOnClickListener { operation() }
@@ -119,8 +129,12 @@ class BootstrapActivity : Activity() {
         "Rest & maintenance" to { openRest() },
         "Continuity Vault" to { choices("Continuity Vault",listOf(
             "Export encrypted Vault" to { chooseVault(false) },"Restore encrypted Vault" to { chooseVault(true) })) },
-        "Models" to { details("Language & voice",
-            "The subsystems form thoughts and make decisions. The language engine puts prepared meaning into words; a later voice engine will speak those words.\n\nPlug-in admission is prepared, but language, Laya decisions and other runtime adapters are not connected yet.") },
+        "Models" to { openModels() },
+        "Autonomy & capabilities" to { openAutonomy() },
+        "Voice" to { voiceMenu() },
+        "Read text from an image locally" to { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*"),33) },
+        "Inner life & reflections" to { openLife() },
+        "Device action" to { deviceAction() },
         "System status" to { details("System status",diagnostics) },
         "Developer checks" to { choices("Developer checks",listOf("Simulate salience signal" to { simulateSignal() })) }
     ))
@@ -205,13 +219,13 @@ class BootstrapActivity : Activity() {
         if(!::brain.isInitialized) return
         val mode=brain.recovery.reader().read();val affect=brain.affect.read();val body=brain.refreshBody(true)
         val notes=brain.capabilities.setting(CapabilityId.LOCAL_NOTE)
-        val text="Continuity: ${if(brain.ready) "ready" else "unavailable"}\nLanguage engine: not connected\n"+
-            "Living memory: lexical recall\nAffect: ${if(affect is FoundationResult.Success) "persistent" else "unavailable"}\n"+
+        val text="Continuity: ${if(brain.ready) "ready" else "unavailable"}\nLanguage: ${if(brain.models.activeHash(com.mavyy.localyuki.foundation.admission.ModelRole.LANGUAGE_EXPRESSION)!=null) "admitted local organ" else "not enabled"}\n"+
+            "Living memory: ${if(brain.models.activeHash(com.mavyy.localyuki.foundation.admission.ModelRole.EMBEDDING)!=null) "semantic + lexical" else "lexical"}\nAffect: ${if(affect is FoundationResult.Success) "persistent" else "unavailable"}\n"+
             "Recovery: ${if(mode is FoundationResult.Success) mode.value.mode.name.lowercase() else "unavailable"}\n"+
             "Body: ${if(body is FoundationResult.Success) body.value.engagement.name.lowercase() else "unavailable"}"
         runOnUiThread { if(!isDestroyed) {
             notesEnabled=notes is FoundationResult.Success && notes.value.policy.enabled
-            diagnostics=text+"\nLocal notes: ${if(notesEnabled) "enabled" else "disabled"}\nCharging-time maintenance: ${if(BackgroundMaintenance.enabled(applicationContext)) "on" else "off"}"
+            diagnostics=text+"\nCurrent capabilities: ${(brain.capabilities.capabilities() as? FoundationResult.Success)?.value?.filter { it.available }?.joinToString { it.id.name } ?: "unavailable"}\nLocal notes: ${if(notesEnabled) "enabled" else "disabled"}\nCharging-time maintenance: ${if(BackgroundMaintenance.enabled(applicationContext)) "on" else "off"}"
             status.text=if(brain.ready) "Continuity ready · ${if(mode is FoundationResult.Success) mode.value.mode.name.lowercase() else "recovery unavailable"}" else "Continuity unavailable"
         } }
     }
@@ -256,6 +270,107 @@ class BootstrapActivity : Activity() {
                 else -> showFailure(restored)
             } } }.setNegativeButton("Close",null).show()
     }
+    private var importRole=com.mavyy.localyuki.foundation.admission.ModelRole.LANGUAGE_EXPRESSION
+    private var lastExpression=""
+    private fun openModels() { task {
+        val result=brain.models.models();if(result !is FoundationResult.Success){showFailure(result);return@task}
+        runOnUiThread { choices("Local cognitive organs",listOf("Import owner model" to { chooseImport() },"Index one changed memory with embeddings" to { task { brain.refreshBody(true);showFailure(brain.semantic.maintain()) } },"Unload / cancel native cognition" to { brain.models.unload();show("Native cognition cancellation requested; continuity retained.") })+
+            result.value.filter { !it.manifest.optBoolean("removed") }.map { model->"${model.manifest.optString("name",model.id)} · ${model.manifest.optString("status")} · ${model.activeRoles.joinToString()}" to { inspectModel(model) } }) }
+    } }
+    private fun roles(action:(com.mavyy.localyuki.foundation.admission.ModelRole)->Unit) {
+        val supported=listOf(com.mavyy.localyuki.foundation.admission.ModelRole.SYSTEM_ONE,com.mavyy.localyuki.foundation.admission.ModelRole.SYSTEM_TWO,com.mavyy.localyuki.foundation.admission.ModelRole.LANGUAGE_EXPRESSION,com.mavyy.localyuki.foundation.admission.ModelRole.EMBEDDING)
+        choices("Cognitive role",supported.map { it.name to { action(it) } })
+    }
+    private fun chooseImport()=roles { role->
+        importRole=role;startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"),31)
+    }
+    private fun inspectModel(model:com.mavyy.localyuki.admission.OwnerModel) {
+        val display=ScrollView(this).apply { addView(label(model.manifest.toString(2)).apply { setPadding(dp(20),dp(12),dp(20),dp(12)) }) }
+        AlertDialog.Builder(this).setTitle("Model manifest & measurements").setView(display)
+            .setPositiveButton("Manage") { _,_->choices("${model.manifest.optString("name",model.id)}",listOf(
+                "Benchmark, admit & use / replace role" to { roles { role->show("Measuring real runtime and unload. Unsafe payloads are rejected before load.");task { val result=brain.models.admit(model.id,role,java.time.Instant.now());if(result is FoundationResult.Success){show("Admitted for $role. Device experience acceptance remains yours.");runOnUiThread { inspectModel(result.value) }}else show("Admission rejected: ${brain.models.lastFailure}") } } },
+                "Disable a role" to { choices("Disable",model.activeRoles.map { role->role.name to { task { showFailure(brain.models.disable(role)) } } }) },
+                "Unload" to { brain.models.unload();show("Native process cancellation requested.") },
+                "Remove private weights (disable roles first)" to { task { showFailure(brain.models.remove(model.id)) } }
+            )) }.setNegativeButton("Close",null).show()
+    }
+    private fun openAutonomy() { task {
+        val policy=brain.life.policy();val capabilities=brain.capabilities.capabilities()
+        if(policy !is FoundationResult.Success||capabilities !is FoundationResult.Success){showFailure(policy);return@task}
+        val p=policy.value
+        runOnUiThread { choices("Autonomy & actual capabilities",listOf(
+            "Autonomy: ${if(p.enabled) "on" else "off"} (toggle)" to { task { val next=p.copy(enabled=!p.enabled);showFailure(brain.life.configure(next));com.mavyy.localyuki.scheduler.PresenceScheduling.configure(applicationContext,next.enabled) } },
+            "Configure check-ins, quiet hours & cooldown" to { policyEditor(p) },
+            "Emergency off: disable capabilities & cognition" to { brain.models.unload();task {com.mavyy.localyuki.embodiment.LocalVoice.stop();CapabilityId.entries.forEach { brain.configureCapability(it,false) };brain.life.configure(p.copy(enabled=false));com.mavyy.localyuki.scheduler.PresenceScheduling.configure(applicationContext,false);show("Autonomy and capabilities disabled.") } },
+            "Grant a document folder" to { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION),32) }
+        )+capabilities.value.map { c->"${c.id}: owner ${if(c.enabled) "on" else "off"}, Android ${if(c.platformGranted) "granted" else "unavailable"}" to { capabilitySetup(c) } }) }
+    } }
+    private fun capabilitySetup(c:CapabilityView) {
+        val description=when(c.id) {
+            CapabilityId.SCREEN,CapabilityId.UI_INTERACTION,CapabilityId.DEVICE_NAVIGATION->"Accessibility lets Yuki inspect structured nodes and use navigation/node actions. Password fields are excluded. Android may require App info → Allow restricted settings for a sideloaded app. Owner enablement is separate from Android access."
+            CapabilityId.NOTIFICATIONS,CapabilityId.MEDIA_CONTROL->"Notification Listener lets Yuki observe notification package/category signals and access Android media sessions. Private notification messages are not collected by the background producer."
+            CapabilityId.LOCKDOWN_CONTROL->"Upgrade Lockdown, then enable Allow Local Yuki control in its Settings. Calls verify both apps’ existing signing identities."
+            CapabilityId.IMAGE_TEXT->"Bundled local OCR reads text from owner-selected images. Screenshot OCR additionally requires Accessibility on Android 11+, checks the foreground target, and refuses password windows. It does not recognize scenes or objects."
+            CapabilityId.COMPANION->"Draw over other apps enables temporary companion check-in messages."
+            CapabilityId.CONVERSATION_NOTIFY->"Android notification permission allows bounded check-ins subject to quiet hours and cooldown."
+            else->"This enables the named capability for trusted executive dispatch. Android grants and actual executors are checked again for every action."
+        }
+        AlertDialog.Builder(this).setTitle(c.id.name).setMessage(description)
+            .setPositiveButton(if(c.enabled) "Disable" else "Enable") { _,_->task { showFailure(brain.configureCapability(c.id,!c.enabled)) } }
+            .setNeutralButton("Android setup") { _,_->try {
+                val intent=when(c.id) {
+                    CapabilityId.SCREEN,CapabilityId.UI_INTERACTION,CapabilityId.DEVICE_NAVIGATION->Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                    CapabilityId.NOTIFICATIONS,CapabilityId.MEDIA_CONTROL->Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                    CapabilityId.COMPANION->Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,android.net.Uri.parse("package:$packageName"))
+                    CapabilityId.SPEECH_INPUT->{requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO),51);null}
+                    CapabilityId.CONVERSATION_NOTIFY->{if(Build.VERSION.SDK_INT>=33)requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),52);null}
+                    CapabilityId.LOCKDOWN_CONTROL->packageManager.getLaunchIntentForPackage("com.mavyy.yukilockdown")
+                    else->Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                };intent?.let(::startActivity)
+            }catch(_:Exception){show("Android setup page unavailable.")} }
+            .setNegativeButton("Exclusions") { _,_->val edit=EditText(this).apply { hint="Denied package names, comma separated" }
+                AlertDialog.Builder(this).setTitle("Sensitive app exclusions").setView(edit).setPositiveButton("Save") { _,_->val denied=edit.text.toString().split(',').map(String::trim).filter(String::isNotBlank).toSet();task { showFailure(brain.configureCapability(c.id,c.enabled,denied)) } }.setNeutralButton("Close",null).show()
+            }.show()
+    }
+    private fun policyEditor(p:com.mavyy.localyuki.presence.AutonomyPolicy) {
+        val column=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL }
+        val fields=listOf("Quiet start hour" to p.quietStart,"Quiet end hour" to p.quietEnd,"Cooldown minutes" to p.cooldownMinutes,"Daily limit" to p.dailyLimit,"Salience threshold" to p.threshold).map { (name,value)->EditText(this).apply { hint=name;setText(value.toString());inputType=InputType.TYPE_CLASS_NUMBER;column.addView(this) } }
+        val notifications=CheckBox(this).apply { text="Notification check-ins";isChecked=p.notifications;column.addView(this) }
+        val overlay=CheckBox(this).apply { text="Overlay check-ins";isChecked=p.overlay;column.addView(this) }
+        AlertDialog.Builder(this).setTitle("Autonomous interaction policy").setView(column).setPositiveButton("Save") { _,_->try {
+            val next=p.copy(notifications=notifications.isChecked,overlay=overlay.isChecked,quietStart=fields[0].text.toString().toInt(),quietEnd=fields[1].text.toString().toInt(),cooldownMinutes=fields[2].text.toString().toInt(),dailyLimit=fields[3].text.toString().toInt(),threshold=fields[4].text.toString().toInt())
+            task { showFailure(brain.life.configure(next)) }
+        }catch(_:Exception){show("Use hours 0–23, cooldown 15–1440 minutes, daily limit 1–12 and threshold 1–100.")} }.setNegativeButton("Cancel",null).show()
+    }
+    private fun openLife() { task {
+        val r=brain.life.records(limit=100);if(r !is FoundationResult.Success){showFailure(r);return@task}
+        runOnUiThread { choices("Ongoing life & structured reflections",listOf("Add an ongoing concern / intention / opinion" to { addLife() },"Deferred executive plans" to { task { val plans=brain.plans.list();if(plans is FoundationResult.Success)runOnUiThread { choices("Plans",plans.value.map { plan->"${plan.intent.capability} · ${plan.due} · ${plan.status}" to { AlertDialog.Builder(this).setMessage(plan.intent.payload).setPositiveButton("Cancel plan") { _,_->task { showFailure(brain.plans.cancel(plan.intent.id)) } }.setNegativeButton("Close",null).show() } }) } } })+
+            r.value.map { item->"${item.kind} · ${item.topic} · ${item.created}" to { AlertDialog.Builder(this).setTitle(item.topic).setMessage(item.content+"\n\n${item.evidence.size} evidence references; prior revision ${item.previous?:"none"}.").setPositiveButton("Resolve") { _,_->task { showFailure(brain.life.resolve(item.id)) } }.setNegativeButton("Close",null).show() } }) }
+    } }
+    private fun addLife()=choices("Record type",com.mavyy.localyuki.presence.LifeKind.entries.filter { it!=com.mavyy.localyuki.presence.LifeKind.REFLECTION }.map { kind->kind.name to {
+        val text=input.text.toString().trim();val topic=EditText(this).apply { hint="Topic" }
+        AlertDialog.Builder(this).setTitle("Use written text as $kind").setView(topic).setPositiveButton("Save") { _,_->val name=topic.text.toString().trim();task { val source=brain.saveInput(text);if(source is FoundationResult.Success)showFailure(brain.life.append(kind,name,text,listOf(source.value.ref),java.time.Instant.now()))else showFailure(source) } }.setNegativeButton("Cancel",null).show()
+    } })
+    private fun voiceMenu()=choices("Local voice",listOf(
+        "Wake phrase while this app is visible" to { if(com.mavyy.localyuki.embodiment.ForegroundWakePhrase.enabled){com.mavyy.localyuki.embodiment.ForegroundWakePhrase.stop();show("Wake phrase disabled.")}else {
+            com.mavyy.localyuki.embodiment.ForegroundWakePhrase.start(this,{ text ->input.setText(text);task { when(val source=brain.saveInput(text)){is FoundationResult.Success->when(val reply=brain.converse(source.value)){is FoundationResult.Success->{lastExpression=reply.value.text;show(reply.value.text)};else->showFailure(reply)};else->showFailure(source)} } },::show)
+            show("Foreground wake phrase enabled. Start with Yuki. This uses offline speech recognition and stops when you leave this app or resources become constrained.")
+        } },
+        "Listen on device" to { if(checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)!=android.content.pm.PackageManager.PERMISSION_GRANTED){requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO),51)}else {
+            show("Listening through Android's on-device recognizer…")
+            com.mavyy.localyuki.embodiment.LocalVoice.listen(this,{ text->input.setText(text);task { brain.observeEvent("VOICE",null,"On-device speech transcription: ${text.take(256)}");show("Speech transcribed locally. Press Send to converse.") } },::show)
+        } },
+        "Speak last reply offline" to { task { if(lastExpression.isNotBlank())showFailure(brain.executeAction(ActionIntent("voice-${UUID.randomUUID()}",CapabilityId.SPEECH_OUTPUT,lastExpression.take(480))))else show("No accepted reply to speak.") } }
+    ))
+    private fun deviceAction() {
+        val caps=CapabilityId.entries.filter { it !in setOf(CapabilityId.LOCAL_NOTE,CapabilityId.SPEECH_INPUT) }
+        choices("Trusted executive action",caps.map { capability->capability.name to {
+            val column=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL }
+            val target=EditText(this).apply { hint="Target Android package (when required)";column.addView(this) }
+            val payload=EditText(this).apply { hint="Typed JSON command";setText(if(capability==CapabilityId.LOCKDOWN_CONTROL)"{\"command\":\"inspect\"}" else "{\"op\":\"inspect\"}");column.addView(this) }
+            AlertDialog.Builder(this).setTitle(capability.name).setView(column).setPositiveButton("Execute granted capability") { _,_->val pkg=target.text.toString().trim().ifEmpty { null };val text=payload.text.toString();task { when(val result=brain.executeAction(ActionIntent("owner-action-${UUID.randomUUID()}",capability,text,pkg))) { is FoundationResult.Success->show(result.value.summary);else->showFailure(result) } } }.setNegativeButton("Cancel",null).show()
+        } })
+    }
     private fun chooseVault(restore: Boolean) {
         val editor=EditText(this).apply { hint="Password (12–256 characters)";inputType=InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD }
         AlertDialog.Builder(this).setTitle(if(restore) "Restore encrypted continuity" else "Encrypt continuity")
@@ -273,6 +388,29 @@ class BootstrapActivity : Activity() {
     }
     override fun onActivityResult(requestCode: Int,resultCode: Int,data: Intent?) {
         super.onActivityResult(requestCode,resultCode,data)
+        if(requestCode==31) {
+            if(resultCode==RESULT_OK && data?.data!=null) { val uri=data.data!!;val role=importRole
+                show("Importing, hashing and inspecting owner model…")
+                task { val stream=contentResolver.openInputStream(uri)?:throw IllegalStateException("Unable to read file")
+                    when(val imported=brain.models.importFile(stream,role,java.time.Instant.now())) {
+                        is FoundationResult.Success->runOnUiThread { inspectModel(imported.value) };else->showFailure(imported)
+                    }
+                }
+            };return
+        }
+        if(requestCode==33) {
+            if(resultCode==RESULT_OK&&data?.data!=null) { val uri=data.data!!
+                task { val payload=org.json.JSONObject().put("op","file").put("uri",uri.toString()).toString()
+                    when(val result=brain.executeAction(ActionIntent("image-${UUID.randomUUID()}",CapabilityId.IMAGE_TEXT,payload))) { is FoundationResult.Success->show(result.value.summary);else->showFailure(result) }
+                }
+            };return
+        }
+        if(requestCode==32) {
+            if(resultCode==RESULT_OK&&data?.data!=null) {
+                val uri=data.data!!;contentResolver.takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                task { showFailure(brain.configureCapability(CapabilityId.DOCUMENTS,true)) }
+            };return
+        }
         if(requestCode !in 21..22) return
         val secret=password;password=null
         if(resultCode!=RESULT_OK || data?.data==null || secret==null) { secret?.fill('\u0000');return }
@@ -294,6 +432,7 @@ class BootstrapActivity : Activity() {
                     showFailure(vault.export(out,secret))
                 } else {
                     BackgroundMaintenance.configure(applicationContext,false)
+                    com.mavyy.localyuki.scheduler.PresenceScheduling.configure(applicationContext,false)
                     brain.close()
                     val result=contentResolver.openInputStream(uri)?.let { vault.restore(it,secret) } ?: FoundationResult.Failure(FailureCategory.INVALID_INPUT)
                     brain=BrainRuntime(applicationContext);brain.open()
@@ -303,6 +442,8 @@ class BootstrapActivity : Activity() {
             } finally { secret.fill('\u0000') }
         }
     }
+    override fun onResume(){super.onResume();com.mavyy.localyuki.resource.OwnerVisibility.active=true}
+    override fun onPause(){com.mavyy.localyuki.resource.OwnerVisibility.active=false;com.mavyy.localyuki.inference.NativeSupervisor.cancel();com.mavyy.localyuki.embodiment.ForegroundWakePhrase.stop();super.onPause()}
     override fun onDestroy() {
         password?.fill('\u0000');password=null
         if(!worker.isShutdown) { worker.execute { ContinuityAccess.exclusive { if(::brain.isInitialized) brain.close() } };worker.shutdown() }

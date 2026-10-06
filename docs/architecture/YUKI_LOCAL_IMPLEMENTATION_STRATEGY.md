@@ -1,3 +1,5 @@
+> **Current implementation authority (2026-10-06):** [owner-directed architecture](OWNER_IMPLEMENTATION_2026-10-06.md). This design document retains its historical intent. Earlier assistant certification/model-freeze rules are superseded by owner-directed automated verification and separate real-device acceptance. Design ambitions are not assertions of current implementation.
+
 # Yuki Local — Brain-First Implementation Strategy
 
 Owner language-role clarification: 2026-10-03; see the prepared-meaning expression boundary in the current handoff.

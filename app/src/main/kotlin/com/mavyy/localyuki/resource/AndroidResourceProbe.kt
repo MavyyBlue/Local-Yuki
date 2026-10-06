@@ -35,6 +35,7 @@ class AndroidResourceProbe(context: Context) {
             }
         } else ThermalPressure.UNKNOWN
         FoundationResult.Success(DeviceResources(memory.totalMem,memory.availMem,percent,charging,thermal,foreground,now,
-            ComputeCapabilities(Build.SUPPORTED_ABIS.toList().take(8),Runtime.getRuntime().availableProcessors().coerceIn(1,256),null,null)))
+            ComputeCapabilities(Build.SUPPORTED_ABIS.toList().take(8),Runtime.getRuntime().availableProcessors().coerceIn(1,256),null,null),memory.lowMemory,(app.getSystemService(Context.POWER_SERVICE) as PowerManager).isPowerSaveMode,
+            foreground && ((com.mavyy.localyuki.embodiment.YukiAccessibility.foregroundPackage?.takeIf { android.os.SystemClock.elapsedRealtime()-com.mavyy.localyuki.embodiment.YukiAccessibility.observedAt<30000 } ?: com.mavyy.localyuki.embodiment.AndroidBody(app).usageForeground())?.let { it!=app.packageName }==true)))
     } catch (_: Exception) { FoundationResult.Unavailable(UnavailableReason.DEPENDENCY_UNAVAILABLE) }
 }
