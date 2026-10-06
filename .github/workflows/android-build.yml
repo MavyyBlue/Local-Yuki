@@ -39,7 +39,7 @@ jobs:
           test -n "$ANDROID_HOME"
           SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 3 -type f -name sdkmanager -print -quit)"
           test -x "$SDKMANAGER"
-          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0'
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
       - name: Restore fixed signing key
         env:
           LOCAL_YUKI_SIGNING_KEYSTORE_BASE64: ${{ secrets.LOCAL_YUKI_SIGNING_KEYSTORE_BASE64 }}
@@ -59,7 +59,7 @@ jobs:
           LOCAL_YUKI_SIGNING_FILE: ${{ runner.temp }}/local-yuki-signing.p12
           LOCAL_YUKI_SIGNING_PASSWORD: ${{ secrets.LOCAL_YUKI_SIGNING_PASSWORD }}
           LOCAL_YUKI_VERSION_CODE: ${{ github.run_number }}
-        run: ./gradlew --no-daemon :foundation-contracts:check :app:testDebugUnitTest :app:assembleDebug
+        run: ./gradlew --no-daemon :foundation-contracts:check :app:testDebugUnitTest :app:assembleDebug :app:lintDebug
       - name: Verify APK signing certificate
         run: |
           set -euo pipefail
