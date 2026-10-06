@@ -94,3 +94,9 @@ Real-engine host proof executes the shipping JNI against downloaded external wei
 ## Galaxy timing continuation — v0.2.2
 
 Exact v0.2.1 source CI and owner-reported SYSTEM_ONE admission now establish loading and one measured role on Galaxy. Other roles rejected throughput and remain unaccepted. CPU adapter v3 records preparation/generation separately, retains per-role failure diagnostics and uses each immutable role receipt for inference limits. Existing imported files and continuity remain. All roles need v3 readmission; new-source CI and full device acceptance remain separate. See [detailed repair evidence](../../PROJECT_HANDOFF/TIMING_ADMISSION_FIX.md).
+
+## v0.2.3 conversation continuation
+
+Live Local main `c1217f8615b80f4f3d9e303bd64bee87ef51c3a0` has tree `5b73d0cbe042103f0f9502c5a9c638f4f82e8420`; Android Actions `37520823624` and mobile import `37520798057` succeeded. Owner reports all three decoder roles admitted on Galaxy. Conversation fails after roughly 15–20 seconds with the shared generic setup message; successful conversation and broader behavioral acceptance remain unconfirmed. Lockdown main remains `78ed3ed2631be2a84471275b27039f799323f9d2`.
+
+v0.2.3 keeps CPU adapter v3 and existing role receipts, shortens reasoning/expression prompts, constrains generated JSON to compact formatting, supplies the actual output allowance and projects honesty rules as semantic JSON rather than a JVM object string. App-owned failure status identifies the stage, reason and available per-pass timing/output/deadline data. System status and model manifests have Copy controls. This diagnostic status is not a Yuki utterance or continuity evidence. No schema, key, workflow or Lockdown change is needed. The exact Galaxy failure cause still requires the new device result. See [conversation repair](../../PROJECT_HANDOFF/CONVERSATION_FIX.md) for verification and the next owner checkpoint.

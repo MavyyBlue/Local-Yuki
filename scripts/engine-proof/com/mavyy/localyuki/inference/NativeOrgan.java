@@ -16,15 +16,17 @@ public final class NativeOrgan {
    long h=0;long start=System.nanoTime();
    if(!System.getProperty("yuki.role","language").equals("embedding")) {
    try(FileInputStream input=new FileInputStream(model)) {
-    h=organ.load(fd(input),2048,2,64,false,60000);long loaded=System.nanoTime();
+    int outputLimit=Integer.getInteger("yuki.output",256);long deadline=Long.getLong("yuki.deadline",60000L);
+    h=organ.load(fd(input),Integer.getInteger("yuki.context",2048),Integer.getInteger("yuki.threads",2),64,false,deadline);long loaded=System.nanoTime();
     String role=System.getProperty("yuki.role","language");
     String system=role.equals("one")?"Interpret owner greeting. Return JSON only with route, confidence(0..100), salience(0..100), intent, affect, meaning, uncertainty, sources, updates. Allowed source IDs: input only. Do not use memory sources. No actions or fabricated memories.":role.equals("two")?"Resolve the question using only supplied evidence. Return JSON points,uncertainty,sources,actions. Use source input; empty actions. Do not expose chain-of-thought. Example structure: {\"points\":[\"The evidence cannot confirm a cause.\"],\"uncertainty\":[\"More evidence is required.\"],\"sources\":[\"input\"],\"actions\":[]}. Put complete natural-language conclusions inside points.":"You are an advisory language organ. Express only supplied meaning. Return JSON only: text, pointIds.";
     String user=role.equals("one")?"Owner input: Hello, Yuki. Prepare Yuki greeting Mavyy back, not a description of the input. Return a concise prepared greeting. uncertainty and updates should be empty.":role.equals("two")?"Owner input: I have a headache. Is its cause certain? Prepared conclusion: the supplied evidence cannot establish a diagnosis. Sources: input. No action is required.":"{\"points\":[{\"id\":0,\"meaning\":\"Hello, Mavyy. I am glad you are here.\"}],\"uncertainty\":[]}";
     if(System.getProperty("yuki.system")!=null)system=java.nio.file.Files.readString(java.nio.file.Path.of(System.getProperty("yuki.system")));
     if(System.getProperty("yuki.user")!=null)user=java.nio.file.Files.readString(java.nio.file.Path.of(System.getProperty("yuki.user")));
+    if(Boolean.getBoolean("yuki.production"))system+="\nOutput allowance: "+outputLimit+" generated tokens total, including every JSON field. Keep content brief and complete.";
     byte[] grammar=java.nio.file.Files.readAllBytes(java.nio.file.Path.of(System.getProperty("yuki.grammar")));
     long inferenceStart=System.nanoTime();
-    String output=new String(organ.generate(h,utf(system),utf(user),grammar,256,60000),StandardCharsets.UTF_8);
+    String output=new String(organ.generate(h,utf(system),utf(user),grammar,outputLimit,deadline),StandardCharsets.UTF_8);
     long inferenceMs=(System.nanoTime()-inferenceStart)/1000000;
     long[] metrics=organ.metrics(h);
     if(metrics.length<8||metrics[4]<=0||metrics[6]<=0||metrics[7]<=0||metrics[6]+metrics[7]>inferenceMs+3)
@@ -34,7 +36,7 @@ public final class NativeOrgan {
     if(output.isBlank()||!output.trim().endsWith("}"))throw new AssertionError("incomplete real inference");
    }finally{if(h!=0)organ.unload(h);}System.out.println("UNLOAD completed");
    }
-   if(!roleIsLanguage()&&!System.getProperty("yuki.role").equals("embedding"))continue;
+   if(Boolean.getBoolean("yuki.production")||(!roleIsLanguage()&&!System.getProperty("yuki.role").equals("embedding")))continue;
    try(FileInputStream input=new FileInputStream(model)) {
     h=organ.load(fd(input),512,2,512,true,60000);
     float[] a=organ.embed(h,utf("A cat sits quietly in the garden."),30000),b=organ.embed(h,utf("A feline rests outside among flowers."),30000),c=organ.embed(h,utf("The price of the cryptocurrency collapsed."),30000);

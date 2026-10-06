@@ -1,10 +1,11 @@
 package com.mavyy.localyuki.inference
 import com.mavyy.localyuki.foundation.admission.ModelRole
 import com.mavyy.localyuki.foundation.embodiment.CapabilityId
-/** App-supplied generation syntax. Models cannot select a grammar or expand its authority. */
+/** App-supplied syntax; compact JSON reserves measured tokens for meaning rather than indentation.
+ * Models cannot select a grammar or expand its authority. Whitespace inside strings is preserved. */
 internal object OrganGrammar {
  private val common="""
-ws ::= [ \t\n\r]{0,2}
+ws ::= ""
 string ::= "\"" character character* "\""
 character ::= [^"\\\x00-\x1F] | "\\" (["\\/bfnrt] | "u" [0-9a-fA-F]{4})
 strings ::= "[" ws (string (ws "," ws string){0,7})? ws "]"

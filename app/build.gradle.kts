@@ -17,7 +17,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = ciVersionCode?.toIntOrNull()?.also { require(it >= 2) } ?: 2
-        versionName = "0.2.2"
+        versionName = "0.2.3"
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
         externalNativeBuild { cmake { arguments += listOf("-DCMAKE_BUILD_TYPE=Release") } }
     }

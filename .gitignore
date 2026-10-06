@@ -11,3 +11,6 @@ local.properties
 *.keystore
 
 .cxx/
+
+__pycache__/
+*.pyc

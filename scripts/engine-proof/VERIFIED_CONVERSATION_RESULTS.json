@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "backend": "shipping JNI CPU, host only",
+  "outputLimit": 64,
+  "greetingWallMs": 24902,
+  "greetingIncludesTwoSequentialOrgans": true,
+  "systemTwoProof": "separate uncertain-question execution, not a complete deep-reasoning turn",
+  "modelSha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+  "fixtureSha256": {
+    "one-full-user.json": "be4f193f3a26f873885ee0cb65662d6996b3c5c616e0f34b19da9752592ac599",
+    "one-full.gbnf": "5d0bae9bbfa067238136040fbee08b46851162bc3f8cc22acf8be5a60f06887c",
+    "one-system.txt": "1027ccf0af008c25e54114ee319d3f4fa286bdc3e51bab07c21213374921e927",
+    "language-full-user.json": "2e9d278b59128d43f3b7e3ebf603d0e003bf479ff0ea80c93526599890380ec8",
+    "language-full.gbnf": "ec82a311b38dc9d33fa0ee5d0050bc29b54335ff578e33b1966e907d12602672",
+    "language-system.txt": "46d7f16fc30628169a28dce1973d48cccd34d2fee3ce2428fa14bcd5b19fb4d6",
+    "two-full-user.json": "bf72e4b981df7001dfc1f71a417d424abc3e4d6e3d644f8ac7336d933a34a2ec",
+    "two-full.gbnf": "7f54798e3bebfc3c4d59d231f06c30d8af084588ea70c56f599be3507899bd17",
+    "two-system.txt": "e36080fb46e458c2e2607963d4612b57e9ccf10cb5cb9ce07cadf3cff5bce3fe"
+  },
+  "measurements": {
+    "SYSTEM_ONE": {
+      "startupMs": 1216,
+      "inferenceMs": 18232,
+      "preparationMs": 14915,
+      "generationMs": 3315,
+      "generatedTokens": 55,
+      "deadlineMs": 30000
+    },
+    "LANGUAGE_EXPRESSION": {
+      "startupMs": 606,
+      "inferenceMs": 4551,
+      "preparationMs": 2717,
+      "generationMs": 1833,
+      "generatedTokens": 30,
+      "deadlineMs": 10397
+    },
+    "SYSTEM_TWO": {
+      "startupMs": 782,
+      "inferenceMs": 13787,
+      "preparationMs": 11305,
+      "generationMs": 2481,
+      "generatedTokens": 45,
+      "deadlineMs": 30000
+    }
+  },
+  "outputs": {
+    "SYSTEM_ONE": "{\"route\":\"RESPOND\",\"confidence\":90,\"salience\":30,\"intent\":\"conversation\",\"affect\":\"warmth\",\"meaning\":[\"Hello, Mavyy. I am glad you are here.\"],\"uncertainty\":[],\"sources\":[\"observation0\"],\"updates\":[]}",
+    "LANGUAGE_EXPRESSION": "{\"text\":\"Well, Mavyy, it's nice to see you. I'm glad you're here.\",\"pointIds\":[0]}",
+    "SYSTEM_TWO": "{\"points\":[\"The cause of your headache is uncertain based on the provided information.\"],\"uncertainty\":[\"The source of the uncertainty is the lack of relevant memories.\"],\"sources\":[\"observation0\",\"observation1\"],\"actions\":[]}"
+  },
+  "galaxyAcceptance": "pending"
+}

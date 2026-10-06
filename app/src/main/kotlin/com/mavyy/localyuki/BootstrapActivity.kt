@@ -97,7 +97,7 @@ class BootstrapActivity : Activity() {
                         show("Yuki is thinking within the current resource budget…")
                         when(val reply=brain.converse(result.value)) {
                             is FoundationResult.Success-> { lastExpression=reply.value.text;show(reply.value.text) }
-                            else->show("Your message is saved. Select and admit compatible System One and Language models in Models; System Two is needed for deeper reasoning. Cognition may also be deferred by resources or a rejected structured response.")
+                            else->showConversationFailure()
                         }
                     }
                     else -> showFailure(result)
@@ -141,8 +141,16 @@ class BootstrapActivity : Activity() {
     private var diagnostics="Opening continuity…"
     private var notesEnabled=false
     private fun details(title: String,text: String) {
-        val content=ScrollView(this).apply { addView(label(text).apply { setPadding(dp(24),dp(12),dp(24),dp(12)) }) }
-        AlertDialog.Builder(this).setTitle(title).setView(content).setPositiveButton("Close",null).show()
+        val content=ScrollView(this).apply { addView(label(text).apply { setPadding(dp(24),dp(12),dp(24),dp(12));setTextIsSelectable(true) }) }
+        AlertDialog.Builder(this).setTitle(title).setView(content).setPositiveButton("Close",null).setNeutralButton("Copy") { _,_->copyDetails(title,text) }.show()
+    }
+    private fun showConversationFailure() {
+        lastExpression=""
+        show("Your message is saved. No reply completed.\n${brain.lastConversationFailure}\nOpen System status to copy these details.")
+    }
+    private fun copyDetails(title:String,text:String) {
+        (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText(title,text))
+        show("Copied $title.")
     }
     private fun openMessageActions()=choices("Use the text you wrote",listOf(
         "Remember" to {
@@ -226,6 +234,7 @@ class BootstrapActivity : Activity() {
         runOnUiThread { if(!isDestroyed) {
             notesEnabled=notes is FoundationResult.Success && notes.value.policy.enabled
             diagnostics=text+"\nCurrent capabilities: ${(brain.capabilities.capabilities() as? FoundationResult.Success)?.value?.filter { it.available }?.joinToString { it.id.name } ?: "unavailable"}\nLocal notes: ${if(notesEnabled) "enabled" else "disabled"}\nCharging-time maintenance: ${if(BackgroundMaintenance.enabled(applicationContext)) "on" else "off"}"
+            if(brain.lastConversationFailure.isNotBlank())diagnostics+="\nLast conversation failure: ${brain.lastConversationFailure}"
             status.text=if(brain.ready) "Continuity ready · ${if(mode is FoundationResult.Success) mode.value.mode.name.lowercase() else "recovery unavailable"}" else "Continuity unavailable"
         } }
     }
@@ -285,14 +294,14 @@ class BootstrapActivity : Activity() {
         importRole=role;startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"),31)
     }
     private fun inspectModel(model:com.mavyy.localyuki.admission.OwnerModel) {
-        val display=ScrollView(this).apply { addView(label(model.manifest.toString(2)).apply { setPadding(dp(20),dp(12),dp(20),dp(12)) }) }
+        val display=ScrollView(this).apply { addView(label(model.manifest.toString(2)).apply { setPadding(dp(20),dp(12),dp(20),dp(12));setTextIsSelectable(true) }) }
         AlertDialog.Builder(this).setTitle("Model manifest & measurements").setView(display)
             .setPositiveButton("Manage") { _,_->choices("${model.manifest.optString("name",model.id)}",listOf(
                 "Benchmark, admit & use / replace role" to { roles { role->show("Measuring real runtime and unload. Unsafe payloads are rejected before load.");task { val result=brain.models.admit(model.id,role,java.time.Instant.now());if(result is FoundationResult.Success){show("Admitted for $role. Device experience acceptance remains yours.");runOnUiThread { inspectModel(result.value) }}else show("Admission rejected: ${brain.models.lastFailure}") } } },
                 "Disable a role" to { choices("Disable",model.activeRoles.map { role->role.name to { task { showFailure(brain.models.disable(role)) } } }) },
                 "Unload" to { brain.models.unload();show("Native process cancellation requested.") },
                 "Remove private weights (disable roles first)" to { task { showFailure(brain.models.remove(model.id)) } }
-            )) }.setNegativeButton("Close",null).show()
+            )) }.setNeutralButton("Copy") { _,_->copyDetails("Model manifest",model.manifest.toString(2)) }.setNegativeButton("Close",null).show()
     }
     private fun openAutonomy() { task {
         val policy=brain.life.policy();val capabilities=brain.capabilities.capabilities()
@@ -353,7 +362,7 @@ class BootstrapActivity : Activity() {
     } })
     private fun voiceMenu()=choices("Local voice",listOf(
         "Wake phrase while this app is visible" to { if(com.mavyy.localyuki.embodiment.ForegroundWakePhrase.enabled){com.mavyy.localyuki.embodiment.ForegroundWakePhrase.stop();show("Wake phrase disabled.")}else {
-            com.mavyy.localyuki.embodiment.ForegroundWakePhrase.start(this,{ text ->input.setText(text);task { when(val source=brain.saveInput(text)){is FoundationResult.Success->when(val reply=brain.converse(source.value)){is FoundationResult.Success->{lastExpression=reply.value.text;show(reply.value.text)};else->showFailure(reply)};else->showFailure(source)} } },::show)
+            com.mavyy.localyuki.embodiment.ForegroundWakePhrase.start(this,{ text ->input.setText(text);task { when(val source=brain.saveInput(text)){is FoundationResult.Success->when(val reply=brain.converse(source.value)){is FoundationResult.Success->{lastExpression=reply.value.text;show(reply.value.text)};else->showConversationFailure()};else->showFailure(source)} } },::show)
             show("Foreground wake phrase enabled. Start with Yuki. This uses offline speech recognition and stops when you leave this app or resources become constrained.")
         } },
         "Listen on device" to { if(checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)!=android.content.pm.PackageManager.PERMISSION_GRANTED){requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO),51)}else {

@@ -42,6 +42,8 @@ class ModelSubsystem(context:Context,private val governor:ResourceGovernor):Auto
     internal fun endTurn()=turnBudget.remove()
     internal fun checkTurnActive() { turnBudget.get()?.let { NativeSupervisor.requireActive(it.epoch) } }
     @Volatile var lastFailure:String="";private set
+    @Volatile internal var lastInference:JSONObject?=null;private set
+    internal fun clearInferenceDiagnostic() { lastInference=null }
     fun models():FoundationResult<List<OwnerModel>> = db.read { sql->
         val roles=db.rows(sql,"SELECT role,model_id FROM organ_role");db.rows(sql,"SELECT id,json FROM organ_manifest ORDER BY id").map { row ->
             OwnerModel(row[0]!!,JSONObject(row[1]!!),roles.filter { it[1]==row[0] }.map { ModelRole.valueOf(it[0]!!) }.toSet()) }
@@ -169,6 +171,7 @@ class ModelSubsystem(context:Context,private val governor:ResourceGovernor):Auto
         },epoch) } finally { governor.release(id) }
     }
     internal fun infer(role:ModelRole,system:String,user:String,maxOutput:Int?=null):OrganResult {
+        lastInference=JSONObject().put("role",role.name).put("previousPass",if(turnBudget.get()!=null)lastInference else null)
         checkTurnActive()
         turnBudget.get()?.let { b->check(b.remaining>0 && android.os.SystemClock.elapsedRealtime()<b.until) { "Cognitive pass/time budget exhausted" };b.remaining-- }
         val active=(models() as? FoundationResult.Success)?.value?.singleOrNull { role in it.activeRoles }?:error("No admitted $role model enabled")
@@ -181,7 +184,11 @@ class ModelSubsystem(context:Context,private val governor:ResourceGovernor):Auto
         val remaining=turnBudget.get()?.let { it.until-android.os.SystemClock.elapsedRealtime() } ?: current.deadlineMillis
         check(remaining>=1000) { "Cognitive turn deadline exhausted" }
         val p=runtimeProfileForRole(current,admitted,remaining,maxOutput)
-        return execute(active,role,p,system,user,m.estimatedMemory(d.fileBytes,p.context),adapter)
+        lastInference?.put("mode",p.mode.name)?.put("outputLimit",p.output)?.put("context",p.context)?.put("deadlineMs",p.deadlineMillis)
+        val boundedSystem=system+"\nOutput allowance: ${p.output} generated tokens total, including every JSON field. Keep content brief and complete."
+        val result=execute(active,role,p,boundedSystem,user,m.estimatedMemory(d.fileBytes,p.context),adapter)
+        lastInference?.put("startupMs",result.startupMs)?.put("preparationMs",result.preparationMs)?.put("generationMs",result.generationMs)?.put("generatedTokens",result.tokens)?.put("outputLimitReached",result.tokens>=p.output)?.put("contextShortened",result.contextTruncated)?.put("unloadVerified",result.unloaded)
+        return result
     }
     fun activeHash(role:ModelRole):String?=(models() as? FoundationResult.Success)?.value?.firstOrNull { role in it.activeRoles }?.manifest?.optString("sha256")
     fun disable(role:ModelRole):FoundationResult<Boolean> = db.write { it.execSQL("DELETE FROM organ_role WHERE role=?",arrayOf(role.name));true }

@@ -1,5 +1,12 @@
 # Local Yuki — Changelog
 
+## 2026-10-06 — 0.2.3 conversation diagnostics and bounded prompts
+
+- Replace the shared setup fallback with the actual failed conversation stage and bounded reason; retain per-pass profile/timing/output/unload diagnostics locally. Failure status is never saved as a Yuki reply.
+- Add selectable System status/model details and explicit Copy controls.
+- Constrain generated JSON to compact formatting, shorten reasoning/expression contracts, communicate each admitted output allowance and project actual honesty rules instead of JVM object identifiers. Preserve strict grammars, evidence validation and resource deadlines.
+- Keep CPU adapter v3, imported weights, role receipts, schema and established signing/workflows. Owner reports all three roles admitted on v0.2.2; conversation and v0.2.3 Galaxy acceptance remain pending.
+
 ## 2026-10-06 — 0.2.2 measured role timing
 
 - Count generated tokens directly and measure prompt preparation separately from generation, including sampling/grammar and decode. Reserve preparation/loading once before applying the existing 40% generation reserve and 64-token minimum.

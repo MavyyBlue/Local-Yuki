@@ -38,6 +38,91 @@ class RuntimeAndVaultTest {
     @Before fun setup() { context=RuntimeEnvironment.getApplication();context.deleteDatabase(ContinuitySchema.NAME) }
     @After fun cleanup() { context.deleteDatabase(ContinuitySchema.NAME) }
     private fun db()=SQLiteDatabase.openDatabase(context.getDatabasePath(ContinuitySchema.NAME).path,null,SQLiteDatabase.OPEN_READWRITE)
+    @Test fun productionConversationContextRetainsCanonicalIdentityAndGroundedInput() {
+        brain().use { brain ->
+            assertTrue(brain.open())
+            val input=ok(brain.saveInput("Hello, Yuki."));val turn=ok(brain.context(input))
+            val json=com.mavyy.localyuki.cognition.CognitiveJson.context(turn,brain.conversationHistory(),listOf("INTENTION: Hello, Yuki."))
+            val parsed=org.json.JSONObject(json)
+            assertEquals(input.payload,parsed.getString("ownerInput"))
+            assertEquals(9,parsed.getJSONObject("identity").getJSONArray("personality").length())
+            assertEquals(turn.identity.self.canonicalName,parsed.getJSONObject("identity").getString("self"))
+            assertEquals(4,parsed.getJSONObject("identity").getJSONArray("honesty").length())
+            System.getenv("YUKI_PROOF_DIR")?.let { path->
+                val dir=File(path).apply { mkdirs() };dir.resolve("one-full-user.json").writeText(json)
+                dir.resolve("one-full.gbnf").writeText(com.mavyy.localyuki.inference.OrganGrammar.forRole(ModelRole.SYSTEM_ONE,com.mavyy.localyuki.cognition.CognitiveJson.refs(turn).keys))
+                val question=ok(brain.saveInput("I have a headache. Is its cause certain?"));val reasoningTurn=ok(brain.context(question))
+                dir.resolve("two-full-user.json").writeText(com.mavyy.localyuki.cognition.CognitiveJson.context(reasoningTurn,brain.conversationHistory(),emptyList()))
+                dir.resolve("two-full.gbnf").writeText(com.mavyy.localyuki.inference.OrganGrammar.forRole(ModelRole.SYSTEM_TWO,com.mavyy.localyuki.cognition.CognitiveJson.refs(reasoningTurn).keys))
+                dir.resolve("language-full.gbnf").writeText(com.mavyy.localyuki.inference.OrganGrammar.forRole(ModelRole.LANGUAGE_EXPRESSION))
+            }
+        }
+    }
+    @Test fun productionConversationUsesSeparateVerifiedOrgans() {
+        brain().use { brain ->
+            assertTrue(brain.open());val input=ok(brain.saveInput("Hello, Yuki."));val turn=ok(brain.context(input))
+            val responses=System.getenv("YUKI_CONVERSATION_RESULTS")?.let { org.json.JSONObject(File(it).readText()).getJSONObject("outputs") }
+                ?:org.json.JSONObject().put("SYSTEM_ONE","{\"route\":\"RESPOND\",\"confidence\":90,\"salience\":30,\"intent\":\"conversation\",\"affect\":\"warmth\",\"meaning\":[\"Hello, Mavyy.\"],\"uncertainty\":[],\"sources\":[\"input\"],\"updates\":[]}")
+                    .put("LANGUAGE_EXPRESSION","{\"text\":\"Hello, Mavyy.\",\"pointIds\":[0]}")
+            val calls=mutableListOf<ModelRole>();val diagnostic=com.mavyy.localyuki.cognition.ConversationDiagnostics()
+            val infer:com.mavyy.localyuki.cognition.CognitiveInference={ role,_,user,_->
+                calls+=role
+                val supplied=org.json.JSONObject(user)
+                if(role==ModelRole.LANGUAGE_EXPRESSION) {
+                    assertFalse(supplied.has("ownerInput"));assertFalse(supplied.has("identity"));assertFalse(supplied.has("availableCapabilities"))
+                    assertEquals(1,supplied.getJSONArray("points").length())
+                }
+                com.mavyy.localyuki.inference.OrganResult(responses.getString(role.name),null,1,2,1,1,1,4096,true,64)
+            }
+            val one=com.mavyy.localyuki.cognition.NeuralSystemOne(infer,{ brain.conversationHistory() },{ emptyList() },diagnostic)
+            val two=com.mavyy.localyuki.cognition.NeuralSystemTwo(infer,{ emptyList() },{ emptyList() },diagnostic)
+            val language=com.mavyy.localyuki.cognition.NeuralExpression(infer,diagnostic)
+            val reply=ok(TurnCoordinator(RealityVerification(brain.memory.reader(),brain.capabilities),one,language,two,
+                com.mavyy.localyuki.cognition.CognitiveComposer(one,two,diagnostic)).respond(turn))
+            assertEquals(listOf(ModelRole.SYSTEM_ONE,ModelRole.LANGUAGE_EXPRESSION),calls)
+            assertTrue(reply.text.contains("Mavyy"));assertEquals(listOf(input.ref),reply.evidence)
+            assertTrue(turn.uncertainty.all { it in reply.text });assertEquals("",diagnostic.reason)
+        }
+    }
+    @Test fun conversationFailuresRetainStageAndNeverBecomeYukiEvidence() {
+        brain().use { brain ->
+            assertTrue(brain.open());val input=ok(brain.saveInput("Hello, Yuki."));val turn=ok(brain.context(input))
+            val diagnostic=com.mavyy.localyuki.cognition.ConversationDiagnostics()
+            fun result(text:String)=com.mavyy.localyuki.inference.OrganResult(text,null,1,2,1,1,1,4096,true,64)
+            val truncated:com.mavyy.localyuki.cognition.CognitiveInference={ _,_,_,_->result("{\"route\":\"RESPOND\"") }
+            val broken=com.mavyy.localyuki.cognition.NeuralSystemOne(truncated,{ emptyList() },{ emptyList() },diagnostic)
+            assertTrue(broken.decide(turn) is FoundationResult.Failure)
+            assertEquals("System One",diagnostic.stage);assertTrue(diagnostic.reason.contains("incomplete"))
+            val infer:com.mavyy.localyuki.cognition.CognitiveInference={ role,_,_,_->result(when(role){
+                ModelRole.SYSTEM_ONE->"{\"route\":\"RESPOND\",\"confidence\":90,\"salience\":30,\"intent\":\"conversation\",\"affect\":\"warmth\",\"meaning\":[\"Hello, Mavyy.\"],\"uncertainty\":[],\"sources\":[\"input\"],\"updates\":[]}"
+                ModelRole.LANGUAGE_EXPRESSION->"{\"text\":\"Hello, Mavyy.\",\"pointIds\":[1]}"
+                else->error("Greeting must not call System Two")
+            }) }
+            val one=com.mavyy.localyuki.cognition.NeuralSystemOne(infer,{ emptyList() },{ emptyList() },diagnostic)
+            val two=com.mavyy.localyuki.cognition.NeuralSystemTwo(infer,{ emptyList() },{ emptyList() },diagnostic)
+            val expression=com.mavyy.localyuki.cognition.NeuralExpression(infer,diagnostic)
+            val reply=TurnCoordinator(RealityVerification(brain.memory.reader(),brain.capabilities),one,expression,two,
+                com.mavyy.localyuki.cognition.CognitiveComposer(one,two,diagnostic)).respond(turn)
+            assertTrue(reply is FoundationResult.Failure);assertEquals("Language Expression",diagnostic.stage)
+            assertTrue(diagnostic.reason.contains("omitted prepared meaning"))
+            assertEquals(listOf("USER_INPUT: Hello, Yuki."),brain.conversationHistory())
+            assertEquals(input,ok(brain.memory.getEvidence(input.ref)))
+        }
+    }
+    @Test fun unavailableConversationPersistsCopyableStatusAcrossOrdinaryReopen() {
+        var status=""
+        brain().use { brain ->
+            assertTrue(brain.open());val input=ok(brain.saveInput("Hello, Yuki."))
+            assertTrue(brain.converse(input) is FoundationResult.Failure)
+            status=brain.lastConversationFailure;assertTrue(status.contains("could not complete"))
+            assertEquals(input,ok(brain.memory.getEvidence(input.ref)))
+            assertEquals(listOf("USER_INPUT: Hello, Yuki."),brain.conversationHistory())
+        }
+        brain().use { brain ->
+            assertTrue(brain.open());assertEquals(status,brain.lastConversationFailure)
+            assertEquals(listOf("USER_INPUT: Hello, Yuki."),brain.conversationHistory())
+        }
+    }
     @Test fun ownerMemoryUpdateRestoreAndEngineReplacementKeepOneContinuity() {
         brain().use { brain ->
             assertTrue(brain.open())

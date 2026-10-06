@@ -30,6 +30,9 @@ class BrainRuntime(context: Context,private val temporal: com.mavyy.localyuki.fo
     val living=LivingMemoryStore(context,temporal,memory.reader())
     val affect=AffectStore(context,temporal,memory.reader())
     private val app=context.applicationContext
+    private val conversationDiagnostic=com.mavyy.localyuki.cognition.ConversationDiagnostics()
+    private val diagnosticPreferences=app.getSharedPreferences("conversation-diagnostics",Context.MODE_PRIVATE)
+    val lastConversationFailure:String get()=diagnosticPreferences.getString("lastFailure","")?:""
     private val body=com.mavyy.localyuki.embodiment.AndroidBody(app)
     val capabilities=CapabilityStore(context,body::grant,body.executors)
     val plans=com.mavyy.localyuki.presence.PlanStore(context,memory.reader())
@@ -166,16 +169,25 @@ class BrainRuntime(context: Context,private val temporal: com.mavyy.localyuki.fo
         };else->emptyList()
     }
     fun converse(input:RawEvidence):FoundationResult<Expression> {
-        return try { models.beginTurn();converseWithinEnvelope(input) }catch(_:Exception){FoundationResult.Failure(FailureCategory.REJECTED)}finally{models.endTurn()}
+        conversationDiagnostic.reset();models.clearInferenceDiagnostic()
+        conversationDiagnostic.enter("Resource preparation")
+        val result=try { models.beginTurn();converseWithinEnvelope(input) }catch(e:Exception){conversationDiagnostic.fail(e);FoundationResult.Failure(FailureCategory.REJECTED)}finally{models.endTurn()}
+        if(result is FoundationResult.Success)diagnosticPreferences.edit().remove("lastFailure").apply()
+        else {
+            conversationDiagnostic.rejected(when(result){is FoundationResult.Failure->result.category.name;is FoundationResult.Unavailable->result.reason.name;else->"Rejected"})
+            diagnosticPreferences.edit().putString("lastFailure",conversationDiagnostic.report(models.lastInference?.toString())).apply()
+        }
+        return result
     }
     private fun converseWithinEnvelope(input:RawEvidence):FoundationResult<Expression> {
+        conversationDiagnostic.enter("Conversation grounding")
         val turn=context(input);if(turn !is FoundationResult.Success)return FoundationResult.Failure(FailureCategory.CONFLICT)
         val pending=life.append(com.mavyy.localyuki.presence.LifeKind.INTENTION,"unfinished-turn",input.payload.take(256),listOf(input.ref),turn.value.time.instant)
         val records=((life.active() as? FoundationResult.Success)?.value.orEmpty().take(8)+(life.records(limit=8) as? FoundationResult.Success)?.value.orEmpty()).distinctBy { it.id }
         val ongoing={ records.filter { !it.resolved }.map { "${it.kind} at ${it.created}: ${it.content}" } }
-        val one=com.mavyy.localyuki.cognition.NeuralSystemOne(models,::conversationHistory,ongoing)
-        val two=com.mavyy.localyuki.cognition.NeuralSystemTwo(models,::conversationHistory,ongoing)
-        val organ=com.mavyy.localyuki.cognition.NeuralExpression(models)
+        val one=com.mavyy.localyuki.cognition.NeuralSystemOne(models,::conversationHistory,ongoing,conversationDiagnostic)
+        val two=com.mavyy.localyuki.cognition.NeuralSystemTwo(models,::conversationHistory,ongoing,conversationDiagnostic)
+        val organ=com.mavyy.localyuki.cognition.NeuralExpression(models,conversationDiagnostic)
         val toolSources=mutableListOf<EvidenceRef>()
         val expression=LanguageExpressionEngine { request ->
             models.checkTurnActive()
@@ -197,8 +209,10 @@ class BrainRuntime(context: Context,private val temporal: com.mavyy.localyuki.fo
             val supplied=if(observations.isEmpty()&&scheduled.isEmpty())request else ExpressionRequest(m.copy(points=(m.points+observations+scheduled).take(16)))
             organ.express(supplied)
         }
-        val result=TurnCoordinator(verifier,one,expression,two,com.mavyy.localyuki.cognition.CognitiveComposer(one,two)).respond(turn.value)
+        conversationDiagnostic.enter("Evidence verification")
+        val result=TurnCoordinator(verifier,one,expression,two,com.mavyy.localyuki.cognition.CognitiveComposer(one,two,conversationDiagnostic)).respond(turn.value)
         if(result !is FoundationResult.Success)return result
+        conversationDiagnostic.enter("Reply persistence")
         val text=result.value.text
         val saved=memory.appendEvidence(NewEvidence("reply-${UUID.randomUUID()}",EvidenceSourceKind.YUKI_OUTPUT,threadId,text))
         if(saved !is FoundationResult.Success)return FoundationResult.Failure(FailureCategory.CONFLICT)
