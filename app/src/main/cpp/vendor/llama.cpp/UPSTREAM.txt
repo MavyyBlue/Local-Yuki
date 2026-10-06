@@ -2,3 +2,5 @@ llama.cpp b5046
 74d4f5b041ad837153b0e90fc864b8290e01d8d5
 https://github.com/ggml-org/llama.cpp
 MIT; vendored library sources and GGML backends. No weights. CPU-only build.
+
+Local Yuki patch (2026-10-06, runtime adapter version 2): borrowed POSIX descriptor loading via llama_model_load_from_fd, read-only regular-file duplication, borrowed GGUF stream parsing and rejection of split models. No /proc pathname reopening. Original path-based APIs remain available upstream. See scripts/engine-proof/NativeDescriptorRegression.java (package subdirectory) and descriptor_sandbox.cpp for restricted-access regression.

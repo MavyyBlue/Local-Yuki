@@ -9,6 +9,9 @@
 #include <stdexcept>
 #include <cerrno>
 #include <algorithm>
+#ifndef _WIN32
+#include <sys/stat.h>
+#endif
 
 #ifdef __has_include
     #if __has_include(<unistd.h>)
@@ -159,6 +162,32 @@ struct llama_file::impl {
         }
     }
 #else
+    impl(int fd) {
+        struct stat info{};
+        const int flags = fcntl(fd, F_GETFL);
+        if (flags < 0 || fstat(fd, &info) != 0) {
+            throw std::runtime_error(format("invalid model descriptor: %s", strerror(errno)));
+        }
+        if ((flags & O_ACCMODE) != O_RDONLY || !S_ISREG(info.st_mode)) {
+            throw std::runtime_error("model descriptor must be a read-only regular file");
+        }
+        const int owned = fcntl(fd, F_DUPFD_CLOEXEC, 0);
+        if (owned < 0) {
+            throw std::runtime_error(format("model descriptor duplication failed: %s", strerror(errno)));
+        }
+        fp = fdopen(owned, "rb");
+        if (!fp) {
+            const int failure = errno;
+            close(owned);
+            throw std::runtime_error(format("model descriptor stream failed: %s", strerror(failure)));
+        }
+        std::unique_ptr<FILE, decltype(&std::fclose)> guard(fp, &std::fclose);
+        seek(0, SEEK_END);
+        size = tell();
+        seek(0, SEEK_SET);
+        guard.release();
+    }
+
     impl(const char * fname, const char * mode) {
         fp = ggml_fopen(fname, mode);
         if (fp == NULL) {
@@ -242,7 +271,13 @@ struct llama_file::impl {
 };
 
 llama_file::llama_file(const char * fname, const char * mode) : pimpl(std::make_unique<impl>(fname, mode)) {}
+#ifndef _WIN32
+llama_file::llama_file(int fd) : pimpl(std::make_unique<impl>(fd)) {}
+#else
+llama_file::llama_file(int) { throw std::runtime_error("descriptor model loading is POSIX only"); }
+#endif
 llama_file::~llama_file() = default;
+FILE * llama_file::stream() const { return pimpl->fp; }
 
 size_t llama_file::tell() const { return pimpl->tell(); }
 size_t llama_file::size() const { return pimpl->size; }

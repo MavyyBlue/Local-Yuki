@@ -97,7 +97,8 @@ struct llama_model_loader {
         bool use_mmap,
         bool check_tensors,
         const llama_model_kv_override * param_overrides_p,
-        const llama_model_tensor_buft_override * param_tensor_buft_overrides_p);
+        const llama_model_tensor_buft_override * param_tensor_buft_overrides_p,
+        int model_fd = -1);
 
     template<typename T>
     typename std::enable_if<std::is_integral<T>::value, bool>::type

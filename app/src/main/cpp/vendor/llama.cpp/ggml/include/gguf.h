@@ -37,6 +37,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #define GGUF_MAGIC   "GGUF"
 #define GGUF_VERSION 3
@@ -78,6 +79,8 @@ extern "C" {
 
     GGML_API struct gguf_context * gguf_init_empty(void);
     GGML_API struct gguf_context * gguf_init_from_file(const char * fname, struct gguf_init_params params);
+    // Local Yuki: borrowed open stream. Does not reopen a path or close the stream.
+    GGML_API struct gguf_context * gguf_init_from_stream(FILE * file, struct gguf_init_params params);
     //GGML_API struct gguf_context * gguf_init_from_buffer(..);
 
     GGML_API void gguf_free(struct gguf_context * ctx);

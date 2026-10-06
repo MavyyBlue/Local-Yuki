@@ -83,7 +83,7 @@ int64_t llama_time_us(void) {
 }
 
 // Returns 0 on success, -1 on error, and -2 on cancellation via llama_progress_callback
-static int llama_model_load(const std::string & fname, std::vector<std::string> & splits, llama_model & model, llama_model_params & params) {
+static int llama_model_load(const std::string & fname, std::vector<std::string> & splits, llama_model & model, llama_model_params & params, int model_fd = -1) {
     // loading time will be recalculated after the first eval, so
     // we take page faults deferred by mmap() into consideration
     model.t_load_us = 0;
@@ -92,7 +92,7 @@ static int llama_model_load(const std::string & fname, std::vector<std::string> 
     model.t_start_us = tm.t_start_us;
 
     try {
-        llama_model_loader ml(fname, splits, params.use_mmap, params.check_tensors, params.kv_overrides, params.tensor_buft_overrides);
+        llama_model_loader ml(fname, splits, params.use_mmap, params.check_tensors, params.kv_overrides, params.tensor_buft_overrides, model_fd);
 
         ml.print_info();
 
@@ -136,7 +136,8 @@ static int llama_model_load(const std::string & fname, std::vector<std::string> 
 static struct llama_model * llama_model_load_from_file_impl(
         const std::string & path_model,
         std::vector<std::string> & splits,
-        struct llama_model_params params) {
+        struct llama_model_params params,
+        int model_fd = -1) {
     ggml_time_init();
 
     unsigned cur_percentage = 0;
@@ -208,7 +209,7 @@ static struct llama_model * llama_model_load_from_file_impl(
         LLAMA_LOG_INFO("%s: using device %s (%s) - %zu MiB free\n", __func__, ggml_backend_dev_name(dev), ggml_backend_dev_description(dev), free/1024/1024);
     }
 
-    const int status = llama_model_load(path_model, splits, *model, params);
+    const int status = llama_model_load(path_model, splits, *model, params, model_fd);
     GGML_ASSERT(status <= 0);
     if (status < 0) {
         if (status == -1) {
@@ -222,6 +223,15 @@ static struct llama_model * llama_model_load_from_file_impl(
     }
 
     return model;
+}
+
+struct llama_model * llama_model_load_from_fd(int fd, struct llama_model_params params) {
+    if (fd < 0) {
+        LLAMA_LOG_ERROR("invalid model descriptor\n");
+        return nullptr;
+    }
+    std::vector<std::string> splits = {};
+    return llama_model_load_from_file_impl("[supplied model descriptor]", splits, params, fd);
 }
 
 // deprecated

@@ -702,6 +702,10 @@ struct gguf_context * gguf_init_from_file_impl(FILE * file, struct gguf_init_par
     return ctx;
 }
 
+struct gguf_context * gguf_init_from_stream(FILE * file, struct gguf_init_params params) {
+    return file ? gguf_init_from_file_impl(file, params) : nullptr;
+}
+
 struct gguf_context * gguf_init_from_file(const char * fname, struct gguf_init_params params) {
     FILE * file = ggml_fopen(fname, "rb");
 

@@ -446,7 +446,8 @@ llama_model_loader::llama_model_loader(
         bool use_mmap,
         bool check_tensors,
         const llama_model_kv_override * param_overrides_p,
-        const llama_model_tensor_buft_override * param_tensor_buft_overrides_p) {
+        const llama_model_tensor_buft_override * param_tensor_buft_overrides_p,
+        int model_fd) {
     int trace = 0;
     if (getenv("LLAMA_TRACE")) {
         trace = atoi(getenv("LLAMA_TRACE"));
@@ -467,7 +468,12 @@ llama_model_loader::llama_model_loader(
         /*.ctx      = */ &ctx,
     };
 
-    meta.reset(gguf_init_from_file(fname.c_str(), params));
+    if (model_fd >= 0) {
+        files.emplace_back(new llama_file(model_fd));
+        meta.reset(gguf_init_from_stream(files.back()->stream(), params));
+    } else {
+        meta.reset(gguf_init_from_file(fname.c_str(), params));
+    }
     if (!meta) {
         throw std::runtime_error(format("%s: failed to load model from %s\n", __func__, fname.c_str()));
     }
@@ -475,7 +481,9 @@ llama_model_loader::llama_model_loader(
     get_key(llm_kv(LLM_KV_GENERAL_ARCHITECTURE), arch_name, false);
     llm_kv = LLM_KV(llm_arch_from_string(arch_name));
 
-    files.emplace_back(new llama_file(fname.c_str(), "rb"));
+    if (model_fd < 0) {
+        files.emplace_back(new llama_file(fname.c_str(), "rb"));
+    }
     contexts.emplace_back(ctx);
 
     // Save tensors data offset of the main file.
@@ -496,6 +504,9 @@ llama_model_loader::llama_model_loader(
 
     // Load additional GGML contexts
     if (n_split > 1) {
+        if (model_fd >= 0) {
+            throw std::runtime_error("split GGUF cannot be loaded from a single supplied descriptor");
+        }
         // make sure the main file is loaded first
         uint16_t idx = 0;
         const std::string kv_split_no = llm_kv(LLM_KV_SPLIT_NO);

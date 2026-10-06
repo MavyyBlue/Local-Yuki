@@ -8,6 +8,21 @@
 #include <sys/resource.h>
 #include <unistd.h>
 #include <stdexcept>
+#include <cstdio>
+#include <cstring>
+
+// Global callback with bounded thread-local errors, never stack-backed callback data.
+static thread_local std::string load_error;
+static void runtime_log(ggml_log_level level, const char * text, void *) {
+ if(level==GGML_LOG_LEVEL_ERROR && load_error.size()<1024) {
+  const size_t size=strnlen(text,1024-load_error.size());
+  for(size_t i=0;i<size;i++) {
+   const auto ch=static_cast<unsigned char>(text[i]);
+   load_error+=(ch>=32 && ch<=126)?text[i]:' ';
+  }
+ }
+ std::fputs(text,stderr);
+}
 
 using Clock=std::chrono::steady_clock;
 struct Organ {
@@ -22,9 +37,11 @@ static Organ* get(jlong h){if(!h)throw std::runtime_error("unloaded organ");retu
 static std::vector<llama_token> tokenize(Organ*o,const std::string&s){auto v=llama_model_get_vocab(o->model);int n=llama_tokenize(v,s.data(),s.size(),nullptr,0,true,true);if(n>=0)throw std::runtime_error("tokenization failed");std::vector<llama_token> t(-n);n=llama_tokenize(v,s.data(),s.size(),t.data(),t.size(),true,true);if(n<=0)throw std::runtime_error("empty tokenization");t.resize(n);return t;}
 extern "C" JNIEXPORT jlong JNICALL Java_com_mavyy_localyuki_inference_NativeOrgan_load(JNIEnv*e,jobject,jint fd,jint context,jint threads,jint batch,jboolean embeddings,jlong deadline){
  try {
+  load_error.clear();llama_log_set(runtime_log,nullptr);
   llama_backend_init();auto o=std::make_unique<Organ>();o->until=Clock::now()+std::chrono::milliseconds(deadline);
   auto p=llama_model_default_params();p.n_gpu_layers=0;p.use_mmap=true;p.use_mlock=false;p.check_tensors=true;p.progress_callback=progress;p.progress_callback_user_data=o.get();
-  const auto path="/proc/self/fd/"+std::to_string(fd);o->model=llama_model_load_from_file(path.c_str(),p);if(!o->model)throw std::runtime_error("runtime rejected weights/architecture");
+  o->model=llama_model_load_from_fd(fd,p);
+  if(!o->model)throw std::runtime_error(aborting(o.get())?"Model loading exceeded safe deadline":"Model load failed: "+(load_error.empty()?std::string("no native diagnostic"):load_error));
   auto c=llama_context_default_params();c.n_ctx=context;c.n_batch=embeddings?context:batch;c.n_ubatch=embeddings?context:batch;c.n_threads=threads;c.n_threads_batch=threads;c.n_seq_max=1;
   c.embeddings=embeddings;c.offload_kqv=false;c.abort_callback=aborting;c.abort_callback_data=o.get();
   if(embeddings)c.pooling_type=LLAMA_POOLING_TYPE_MEAN;

@@ -18,7 +18,7 @@ internal interface OrganAdapter {
     fun execute(file:File,profile:SafeRuntimeProfile,system:String,user:String,embedding:Boolean,grammar:String,safe:()->Boolean,epoch:Long):OrganResult
 }
 internal class CpuGgufAdapter(context:Context):OrganAdapter {
-    override val id="llama-cpp-cpu-b5046";override val version=1
+    override val id="llama-cpp-cpu-b5046";override val version=2
     private val native=NativeSupervisor(context)
     override fun supports(model:ModelDescriptor,metadata:GgufMetadata)=model.format==ModelFormat.GGUF && metadata.parameters>0
     override fun execute(file:File,profile:SafeRuntimeProfile,system:String,user:String,embedding:Boolean,grammar:String,safe:()->Boolean,epoch:Long)=native.run(file,profile,system,user,embedding,grammar,safe,epoch)

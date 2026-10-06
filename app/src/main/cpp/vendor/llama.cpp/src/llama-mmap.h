@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstdio>
 #include <memory>
 #include <vector>
 
@@ -14,12 +15,15 @@ using llama_mlocks = std::vector<std::unique_ptr<llama_mlock>>;
 
 struct llama_file {
     llama_file(const char * fname, const char * mode);
+    // Local Yuki: duplicate a borrowed read-only regular-file descriptor. No path access.
+    explicit llama_file(int fd);
     ~llama_file();
 
     size_t tell() const;
     size_t size() const;
 
     int file_id() const; // fileno overload
+    FILE * stream() const;
 
     void seek(size_t offset, int whence) const;
 

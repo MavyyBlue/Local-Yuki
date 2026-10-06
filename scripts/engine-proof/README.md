@@ -13,3 +13,13 @@ java --add-opens java.base/java.io=ALL-UNNAMED -Djava.library.path=/tmp/yuki-nat
 ```
 
 Use roles `two` and `language` with their matching extracted contracts. Role `embedding` skips generation and tests normalized related/unrelated vectors. The harness bounds real inference and always unloads. Representative JSON checks do not certify broad reasoning, calibration or personality quality. Small SmolLM models tested earlier could generate language/vectors but failed typed decision output; format/size alone therefore cannot admit a model. A pathological bounded-string grammar was corrected after timeout evidence; recursive character grammar plus runtime token/byte bounds avoids that cost.
+
+## Isolated-descriptor regression
+
+On Linux, build with `-DYUKI_HOST_PROOF=ON -DYUKI_DESCRIPTOR_TESTS=ON` and target `yuki-organ yuki-descriptor-test`. Compile both Java classes from `com/mavyy/localyuki/inference/`, then run:
+
+```sh
+java --add-opens java.base/java.io=ALL-UNNAMED -Djava.library.path=/tmp/yuki-native -cp /tmp/yuki-proof com.mavyy.localyuki.inference.NativeDescriptorRegression /path/qwen2.5-1.5b-instruct-q4_k_m.gguf /path/bge-small-en-v1.5-q8_0.gguf
+```
+
+This requires seccomp support; failure to install restrictions is a test failure, never a skipped pass. It proves `/proc/self/fd` reopening returns EACCES, then executes actual decoder generation twice and normalized BGE embeddings through shipping JNI with all pathname opens forbidden. It checks rejected malformed/unsafe descriptors and descriptor cleanup/borrowed ownership. The host-only restriction fixture is never linked into the Android APK. This simulates the access constraint; it does not assert Galaxy SELinux logs or physical acceptance.

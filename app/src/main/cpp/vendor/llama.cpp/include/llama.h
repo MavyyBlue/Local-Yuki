@@ -435,6 +435,10 @@ extern "C" {
                              const char * path_model,
               struct llama_model_params   params);
 
+    // Local Yuki POSIX extension. Borrows fd, duplicates it internally, accepts only a
+    // read-only regular file and single GGUF. Never resolves/reopens its pathname.
+    LLAMA_API struct llama_model * llama_model_load_from_fd(int fd, struct llama_model_params params);
+
     // Load the model from multiple splits (support custom naming scheme)
     // The paths must be in the correct order
     LLAMA_API struct llama_model * llama_model_load_from_splits(

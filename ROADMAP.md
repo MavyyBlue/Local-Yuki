@@ -9,3 +9,7 @@ Phases 12–20 have real production implementations: GGUF CPU import/admission/r
 Phase 21 has host shipping-JNI replacement evidence for two real decision/reason/language engines and two real embedding engines, plus app-owned continuity boundary tests. Full Android engine replacement and a second speech/vision adapter have not been proved. Phase 22 has fresh-database historical restore, fresh-body grant reset, resource reinspection and interrupted-action recovery tests; a physical second-phone transfer remains pending.
 
 Current scope gaps include general scene/object vision, a dedicated background hotword engine, non-GGUF/accelerated runtimes and real-device model/IPC/background validation. Background reflective cognition is low-cost structured deterministic processing, not continuous unattended large-model reasoning. These gaps are recorded honestly and do not convert compilation into architectural acceptance. The [owner checklist](PROJECT_HANDOFF/PHONE_ACCEPTANCE.md) is the next acceptance authority.
+
+## Owner acceptance repair — 0.2.1
+
+The owner installed both updates; actual model admission failed with a generic native error. Phase 12 requires renewed Galaxy admission proof. Adapter version 2 uses authorized descriptors directly, without reopening isolated-inaccessible paths; real path-denied execution and unload regression accompany this repair. Existing imported weights can be readmitted. See [repair record](PROJECT_HANDOFF/DESCRIPTOR_LOAD_FIX.md).

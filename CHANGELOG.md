@@ -1,5 +1,12 @@
 # Local Yuki — Changelog
 
+## 2026-10-06 — 0.2.1 isolated model descriptor loading
+
+- Replace `/proc/self/fd` pathname reopening with a borrowed POSIX descriptor API. Validate read-only regular files, duplicate/close internally, and parse GGUF metadata from the open stream. Preserve mmap and all resource/admission isolation.
+- CPU adapter version 2 requires fresh role admission; retain imported files, immutable receipts and continuity. No database migration, signing change, permission expansion or data reset.
+- Surface bounded ASCII native load diagnostics instead of attributing every loader failure to incompatible weights.
+- Add real shipping-JNI regression under enforced seccomp denial of pathname opens, including invalid/closed/writable/nonregular/corrupt input, repeated load/unload and caller-descriptor ownership. Galaxy retry remains owner acceptance.
+
 Current entries distinguish implementation, automated verification, exact-source CI and owner acceptance. Historical certification terminology is preserved below.
 
 ## 2026-10-06 — Owner-directed real runtime and autonomy implementation

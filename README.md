@@ -4,6 +4,8 @@ Local Yuki is persistent app-owned identity, continuity, memory, affect, state, 
 
 Start with [current implementation and phase status](docs/architecture/OWNER_IMPLEMENTATION_2026-10-06.md), [current state](PROJECT_HANDOFF/CURRENT_STATE.md), [roadmap](ROADMAP.md) and [Galaxy acceptance](PROJECT_HANDOFF/PHONE_ACCEPTANCE.md). The [North Star](docs/architecture/YUKI_LOCAL_NORTH_STAR.md) remains the design goal, not a claim that every desired behavior has been physically accepted.
 
+Version 0.2.1 fixes isolated-process model loading by reading the owner-authorized descriptor directly. Existing imported files can be benchmarked again; no reimport or database reset is required. See [descriptor loading fix](PROJECT_HANDOFF/DESCRIPTOR_LOAD_FIX.md).
+
 ## Run and use
 
 Build with JDK17, Android SDK35/build-tools35.0.0, NDK27.2.12479018 and CMake3.22.1. Run `python3 scripts/check.py` for foundation/Android tests, native APK assembly and lint. CI restores the existing signing key and verifies its fixed certificate. Local unsigned builds are for verification; install the matching-signature CI APK over the existing app. Never uninstall/reset to evade migrations.
