@@ -9,11 +9,14 @@ data class SafeRuntimeProfile(val context:Int,val output:Int,val threads:Int,val
 }
 /** Observable phone constraints outrank optional background cognition. No GPU/NPU promise is inferred. */
 object AdaptiveProfile {
-    /** Conservative generated-token budget from the actual admission timing, including startup reserve. */
-    fun measuredOutput(profile:SafeRuntimeProfile,startupMs:Long,inferenceMs:Long,tokens:Int):Int? {
-        if(startupMs<0 || inferenceMs<=0 || tokens<=0 || startupMs>=profile.deadlineMillis) return null
-        val capacity=(tokens.toDouble()/inferenceMs*(profile.deadlineMillis-startupMs)*0.6).toInt()
-        return if(capacity<64) null else minOf(profile.output,capacity)
+    /** Reserve loading and prompt preparation once; extrapolate only measured generation with 40% headroom. */
+    fun measuredOutput(profile:SafeRuntimeProfile,startupMs:Long,generationMs:Long,tokens:Int,preparationMs:Long=0):Int? {
+        if(startupMs<0 || preparationMs<0 || generationMs<=0 || tokens<=0 || startupMs>=profile.deadlineMillis) return null
+        val remaining=profile.deadlineMillis-startupMs
+        if(preparationMs>=remaining) return null
+        val capacity=(tokens.toDouble()/generationMs*(remaining-preparationMs)*0.6).toInt()
+        val budget=minOf(profile.output,capacity)
+        return if(budget<64) null else budget
     }
     fun mode(r:DeviceResources,now:Instant,active:Int=0):OperatingMode=when {
         Duration.between(r.capturedAt,now).seconds !in 0..30 || r.availableBytes<128*ResourceGovernor.MIB || r.thermal>=ThermalPressure.SEVERE || (!r.charging&&(r.batteryPercent?:0)<=5) -> OperatingMode.RECOVERY

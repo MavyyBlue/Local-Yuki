@@ -22,9 +22,15 @@ public final class NativeOrgan {
     String user=role.equals("one")?"Owner input: Hello, Yuki. Prepare Yuki greeting Mavyy back, not a description of the input. Return a concise prepared greeting. uncertainty and updates should be empty.":role.equals("two")?"Owner input: I have a headache. Is its cause certain? Prepared conclusion: the supplied evidence cannot establish a diagnosis. Sources: input. No action is required.":"{\"points\":[{\"id\":0,\"meaning\":\"Hello, Mavyy. I am glad you are here.\"}],\"uncertainty\":[]}";
     if(System.getProperty("yuki.system")!=null)system=java.nio.file.Files.readString(java.nio.file.Path.of(System.getProperty("yuki.system")));
     if(System.getProperty("yuki.user")!=null)user=java.nio.file.Files.readString(java.nio.file.Path.of(System.getProperty("yuki.user")));
-    String output=new String(organ.generate(h,utf(system),utf(user),java.nio.file.Files.readAllBytes(java.nio.file.Path.of(System.getProperty("yuki.grammar"))),256,60000),StandardCharsets.UTF_8);
+    byte[] grammar=java.nio.file.Files.readAllBytes(java.nio.file.Path.of(System.getProperty("yuki.grammar")));
+    long inferenceStart=System.nanoTime();
+    String output=new String(organ.generate(h,utf(system),utf(user),grammar,256,60000),StandardCharsets.UTF_8);
+    long inferenceMs=(System.nanoTime()-inferenceStart)/1000000;
+    long[] metrics=organ.metrics(h);
+    if(metrics.length<8||metrics[4]<=0||metrics[6]<=0||metrics[7]<=0||metrics[6]+metrics[7]>inferenceMs+3)
+     throw new AssertionError("invalid split prompt/generation measurements: "+Arrays.toString(metrics)+" wall="+inferenceMs);
 
-    System.out.println("GENERATION model="+new File(model).getName()+" startupMs="+(loaded-start)/1000000+" inferenceMs="+(System.nanoTime()-loaded)/1000000+" metrics="+Arrays.toString(organ.metrics(h))+" outputBase64="+Base64.getEncoder().encodeToString(output.getBytes(StandardCharsets.UTF_8)));
+    System.out.println("GENERATION model="+new File(model).getName()+" startupMs="+(loaded-start)/1000000+" inferenceMs="+inferenceMs+" metrics="+Arrays.toString(metrics)+" outputBase64="+Base64.getEncoder().encodeToString(output.getBytes(StandardCharsets.UTF_8)));
     if(output.isBlank()||!output.trim().endsWith("}"))throw new AssertionError("incomplete real inference");
    }finally{if(h!=0)organ.unload(h);}System.out.println("UNLOAD completed");
    }

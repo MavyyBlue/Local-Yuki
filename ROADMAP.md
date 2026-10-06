@@ -13,3 +13,7 @@ Current scope gaps include general scene/object vision, a dedicated background h
 ## Owner acceptance repair — 0.2.1
 
 The owner installed both updates; actual model admission failed with a generic native error. Phase 12 requires renewed Galaxy admission proof. Adapter version 2 uses authorized descriptors directly, without reopening isolated-inaccessible paths; real path-denied execution and unload regression accompany this repair. Existing imported weights can be readmitted. See [repair record](PROJECT_HANDOFF/DESCRIPTOR_LOAD_FIX.md).
+
+## Owner acceptance repair — 0.2.2
+
+The v0.2.1 imported tree matches live main and its exact Android CI passed. Owner reports SYSTEM_ONE admitted on Galaxy with Qwen2.5 1.5B Q4_K_M; LANGUAGE_EXPRESSION and SYSTEM_TWO rejected at the throughput gate. This is successful decoder loading and one role admission, not full cognitive or device acceptance. v0.2.2 / adapter v3 measures prompt preparation separately, keeps the same 64-token minimum and 40% generation headroom, retains failed-role diagnostics and applies each role's immutable receipt limits. Existing files/continuity remain. Exact-source CI and Galaxy readmission for this repair remain pending. See [timing repair](PROJECT_HANDOFF/TIMING_ADMISSION_FIX.md).

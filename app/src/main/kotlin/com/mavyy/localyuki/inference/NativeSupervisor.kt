@@ -8,7 +8,8 @@ import java.util.concurrent.*
 import java.util.concurrent.locks.ReentrantLock
 
 internal data class OrganResult(val text:String?,val vector:FloatArray?,val startupMs:Long,val inferenceMs:Long,
-    val parameters:Long,val weightBytes:Long,val peakBytes:Long,val context:Int,val unloaded:Boolean,val tokens:Int,val contextTruncated:Boolean=false)
+    val parameters:Long,val weightBytes:Long,val peakBytes:Long,val context:Int,val unloaded:Boolean,val tokens:Int,val contextTruncated:Boolean=false,
+    val preparationMs:Long=0,val generationMs:Long=inferenceMs)
 /** Native failures/timeouts affect a disposable process. A second cognition cannot bypass the global lock. */
 internal class NativeSupervisor(context:Context) {
     private val app=context.applicationContext
@@ -53,8 +54,12 @@ internal class NativeSupervisor(context:Context) {
             monitor.scheduleAtFixedRate({ if(!safe()) { response.completeExceptionally(IllegalStateException("resource pressure interrupted runtime"));try { remote.send(Message.obtain(null,2)) } catch(_:Exception){} } },1,1,TimeUnit.SECONDS)
             val b=response.get(profile.deadlineMillis+6000,TimeUnit.MILLISECONDS)
             check(b.getBoolean("success")) { b.getString("error")?:"runtime failed" };check(b.getBoolean("unloaded")) { "runtime unload failed" }
-            val m=b.getLongArray("metrics")?:error("missing measurements");require(m.size>=4 && m[2]>0 && m[2]<=profile.memoryBudget)
-            return OrganResult(b.getString("text"),b.getFloatArray("vector"),b.getLong("startupMs"),b.getLong("inferenceMs"),m[0],m[1],m[2],m[3].toInt(),true,m.getOrElse(4){0}.toInt(),m.getOrElse(5){0}==1L)
+            val m=b.getLongArray("metrics")?:error("missing measurements");require(m.size>=8 && m[2]>0 && m[2]<=profile.memoryBudget)
+            val inferenceMs=b.getLong("inferenceMs")
+            require(m[6]>=0 && m[7]>=0 && (embedding || (m[4]>0 && m[7]>0))) { "Missing generation timing" }
+            // Account for JNI/tokenization overhead as preparation too; never give that time back to generation.
+            val preparationMs=if(embedding)0 else maxOf(m[6],inferenceMs-m[7])
+            return OrganResult(b.getString("text"),b.getFloatArray("vector"),b.getLong("startupMs"),inferenceMs,m[0],m[1],m[2],m[3].toInt(),true,m[4].toInt(),m[5]==1L,preparationMs,m[7])
         } finally {
             try { remote?.send(Message.obtain(null,2)) } catch(_:Exception){}
             active=null;pending=null;monitor.shutdownNow();if(bound)app.unbindService(connection);lock.unlock()

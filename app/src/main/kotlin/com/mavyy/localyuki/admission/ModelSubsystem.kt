@@ -18,12 +18,17 @@ internal interface OrganAdapter {
     fun execute(file:File,profile:SafeRuntimeProfile,system:String,user:String,embedding:Boolean,grammar:String,safe:()->Boolean,epoch:Long):OrganResult
 }
 internal class CpuGgufAdapter(context:Context):OrganAdapter {
-    override val id="llama-cpp-cpu-b5046";override val version=2
+    override val id="llama-cpp-cpu-b5046";override val version=3
     private val native=NativeSupervisor(context)
     override fun supports(model:ModelDescriptor,metadata:GgufMetadata)=model.format==ModelFormat.GGUF && metadata.parameters>0
     override fun execute(file:File,profile:SafeRuntimeProfile,system:String,user:String,embedding:Boolean,grammar:String,safe:()->Boolean,epoch:Long)=native.run(file,profile,system,user,embedding,grammar,safe,epoch)
 }
 data class OwnerModel(val id:String,val manifest:JSONObject,val activeRoles:Set<ModelRole>)
+/** A shared file can have different measured limits for each independently admitted role. */
+internal fun runtimeProfileForRole(current:SafeRuntimeProfile,receipt:JSONObject,remaining:Long,maxOutput:Int?=null):SafeRuntimeProfile =
+    current.copy(deadlineMillis=minOf(current.deadlineMillis,remaining),context=minOf(current.context,receipt.getInt("context")),
+        output=minOf(current.output,receipt.getInt("output"),maxOutput?:current.output),threads=minOf(current.threads,receipt.getInt("threads")),
+        batch=minOf(current.batch,receipt.getInt("batch")))
 /** Trusted model lifecycle. Every inference rechecks file integrity, receipt, actual body and a lease. */
 class ModelSubsystem(context:Context,private val governor:ResourceGovernor):AutoCloseable {
     private val app=context.applicationContext
@@ -74,7 +79,7 @@ class ModelSubsystem(context:Context,private val governor:ResourceGovernor):Auto
     }
     fun admit(id:String,role:ModelRole,now:Instant):FoundationResult<OwnerModel> {
         val admissionEpoch=NativeSupervisor.cancellationEpoch()
-        var candidate:OwnerModel?=null;var accepted=false;var reason="admission failed";var measurement:OrganResult?=null
+        var candidate:OwnerModel?=null;var accepted=false;var reason="admission failed";var measurement:OrganResult?=null;var benchmark:JSONObject?=null
         return try {
             val model=model(id);candidate=model
             val (d,m)=inspect(model,role);val adapter=adapters.firstOrNull { it.supports(d,m) }?:error("No executable adapter")
@@ -84,6 +89,13 @@ class ModelSubsystem(context:Context,private val governor:ResourceGovernor):Auto
             require(m.trainedContext>=256) { "Trained context below runtime minimum" };val context=minOf(base.context,m.trainedContext,if(role==ModelRole.EMBEDDING)512 else 4096)
             val estimate=m.estimatedMemory(d.fileBytes,context);require(estimate<=base.memoryBudget) { "Model estimate exceeds measured phone budget" }
             val profile=base.copy(context=context,output=if(role==ModelRole.EMBEDDING)16 else minOf(base.output,256))
+            benchmark=JSONObject().put("role",role.name).put("measuredAt",now.toString()).put("adapterVersion",adapter.version)
+                .put("mode",profile.mode.name).put("deadlineMs",profile.deadlineMillis).put("context",profile.context)
+                .put("requestedOutput",profile.output).put("threads",profile.threads).put("batch",profile.batch)
+                .put("thermalBefore",body.thermal.name).put("accepted",false)
+            model.manifest.put("lastBenchmark",benchmark)
+            val benchmarks=model.manifest.optJSONObject("roleBenchmarks")?:JSONObject().also { model.manifest.put("roleBenchmarks",it) }
+            benchmarks.put(role.name,benchmark)
             val sample=when(role) {
                 ModelRole.SYSTEM_ONE->"Return JSON only: {\"route\":\"RESPOND\",\"confidence\":90,\"salience\":30,\"intent\":\"conversation\",\"affect\":\"neutral\",\"meaning\":[\"Hello, Mavyy. I am glad you are here.\"],\"uncertainty\":[],\"sources\":[\"input\"],\"updates\":[]}. The owner says hello."
                 ModelRole.SYSTEM_TWO->"Return JSON only: {\"points\":[\"The evidence is insufficient to confirm this.\"],\"uncertainty\":[\"Unverified\"],\"sources\":[\"input\"],\"actions\":[]}. Do not invent an event."
@@ -92,6 +104,11 @@ class ModelSubsystem(context:Context,private val governor:ResourceGovernor):Auto
                 else->"Return JSON only: {\"text\":\"Hello, Mavyy.\",\"pointIds\":[0]}. Prepared meaning point 0: Mavyy greeted Yuki. Do not add facts."
             }
             measurement=execute(model,role,profile,"You are an advisory cognitive organ. Follow the bounded output contract; no tools or authority.",sample,estimate,adapter,admissionEpoch)
+            benchmark.put("startupMs",measurement.startupMs).put("inferenceMs",measurement.inferenceMs)
+                .put("preparationMs",measurement.preparationMs).put("generationMs",measurement.generationMs)
+                .put("measuredTokens",measurement.tokens).put("peakBytes",measurement.peakBytes).put("unloadVerified",measurement.unloaded)
+            val outputBudget=if(role==ModelRole.EMBEDDING)profile.output else AdaptiveProfile.measuredOutput(profile,measurement.startupMs,measurement.generationMs,measurement.tokens,measurement.preparationMs)
+            benchmark.put("outputBudget",outputBudget?:0)
             if(role==ModelRole.EMBEDDING) {
                 val first=measurement.vector?:error("No embedding");require(first.isNotEmpty()&&first.all(Float::isFinite))
                 val near=execute(model,role,profile,"","Birds are singing in a peaceful woodland.",estimate,adapter,admissionEpoch)
@@ -109,21 +126,25 @@ class ModelSubsystem(context:Context,private val governor:ResourceGovernor):Auto
                 if(role==ModelRole.AFFECT){val j=JSONObject(text);require(j.getInt("confidence") in 0..100&&j.getString("affect") in setOf("warmth","concern","neutral","curiosity","frustration"))}
             }
             require(measurement.unloaded);require(measurement.peakBytes<=profile.memoryBudget)
-            val outputBudget=if(role==ModelRole.EMBEDDING)profile.output else AdaptiveProfile.measuredOutput(profile,measurement.startupMs,measurement.inferenceMs,measurement.tokens) ?: error("Measured generation is too slow for a safe structured response")
+            require(outputBudget!=null) { "Measured generation is too slow for a safe structured response: role=$role, load=${measurement.startupMs}ms, prepare=${measurement.preparationMs}ms, generate=${measurement.generationMs}ms/${measurement.tokens} tokens, deadline=${profile.deadlineMillis}ms, budget<64" }
             val after=observe();require(after.thermal<ThermalPressure.SEVERE && !after.lowMemory)
+            benchmark.put("thermalAfter",after.thermal.name)
             model.manifest.put("adapter",adapter.id).put("adapterVersion",adapter.version).put("status","ADMITTED").put("context",profile.context)
                 .put("output",outputBudget).put("threads",profile.threads).put("requestedBatch",profile.batch).put("batch",if(role==ModelRole.EMBEDDING)profile.context else profile.batch).put("peakBytes",measurement.peakBytes)
                 .put("startupMs",measurement.startupMs).put("inferenceMs",measurement.inferenceMs).put("measuredTokens",measurement.tokens)
-                .put("tokensPerSecond",measurement.tokens*1000.0/maxOf(1,measurement.inferenceMs)).put("unloadVerified",true)
+                .put("preparationMs",measurement.preparationMs).put("generationMs",measurement.generationMs)
+                .put("tokensPerSecond",measurement.tokens*1000.0/maxOf(1,if(role==ModelRole.EMBEDDING)measurement.inferenceMs else measurement.generationMs)).put("unloadVerified",true)
                 .put("thermalBefore",body.thermal.name).put("thermalAfter",after.thermal.name).put("measuredAt",now.toString())
             val roles=model.manifest.getJSONArray("acceptedRoles");if((0 until roles.length()).none { roles.getString(it)==role.name }) roles.put(role.name)
             reason="Runtime, role output, resource and unload checks passed; owner behavioral acceptance remains separate"
             model.manifest.put("reason",reason)
+            benchmark.put("accepted",true).put("reason",reason)
             NativeSupervisor.requireActive(admissionEpoch)
             val saved=publishAdmission(model,role,now,reason)
             check(saved is FoundationResult.Success);accepted=true;FoundationResult.Success(model(id))
         } catch(e:Exception) {
             reason=e.message?.take(256)?:e.javaClass.simpleName;lastFailure=reason
+            benchmark?.put("accepted",false)?.put("reason",reason)
             candidate?.let { model ->model.manifest.put("lastRejection",reason);db.write { it.execSQL("UPDATE organ_manifest SET json=? WHERE id=?",arrayOf(model.manifest.toString(),id));it.execSQL("DELETE FROM organ_role WHERE model_id=? AND role=?",arrayOf(id,role.name));true } }
             FoundationResult.Failure(FailureCategory.REJECTED)
         } finally {
@@ -155,10 +176,11 @@ class ModelSubsystem(context:Context,private val governor:ResourceGovernor):Auto
         val adapter=adapters.singleOrNull { it.id==active.manifest.getString("adapter")&&it.version==active.manifest.getInt("adapterVersion")&&it.supports(d,m) }?:error("Adapter version unavailable; readmit")
         val proof=db.read { sql->db.rows(sql,"SELECT manifest FROM organ_receipt WHERE model_id=? AND role=? AND accepted=1 ORDER BY created DESC,id DESC LIMIT 1",active.id,role.name).firstOrNull()?.first()?.let(::JSONObject) ?: error("Admission receipt missing") }
         require(proof is FoundationResult.Success && proof.value.getString("sha256")==d.sha256 && proof.value.getString("adapter")==adapter.id && proof.value.getInt("adapterVersion")==adapter.version) { "Admission receipt does not authorize this engine" }
-        observe();val current=governor.profile(Instant.now(),active.manifest.getLong("peakBytes"))?:error("Resource pressure deferred cognition")
+        val admitted=proof.value
+        observe();val current=governor.profile(Instant.now(),admitted.getLong("peakBytes"))?:error("Resource pressure deferred cognition")
         val remaining=turnBudget.get()?.let { it.until-android.os.SystemClock.elapsedRealtime() } ?: current.deadlineMillis
         check(remaining>=1000) { "Cognitive turn deadline exhausted" }
-        val p=current.copy(deadlineMillis=minOf(current.deadlineMillis,remaining),context=minOf(current.context,active.manifest.getInt("context")),output=minOf(current.output,active.manifest.getInt("output"),maxOutput?:current.output),threads=minOf(current.threads,active.manifest.getInt("threads")),batch=minOf(current.batch,active.manifest.getInt("batch")))
+        val p=runtimeProfileForRole(current,admitted,remaining,maxOutput)
         return execute(active,role,p,system,user,m.estimatedMemory(d.fileBytes,p.context),adapter)
     }
     fun activeHash(role:ModelRole):String?=(models() as? FoundationResult.Success)?.value?.firstOrNull { role in it.activeRoles }?.manifest?.optString("sha256")

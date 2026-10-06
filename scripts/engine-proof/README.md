@@ -23,3 +23,7 @@ java --add-opens java.base/java.io=ALL-UNNAMED -Djava.library.path=/tmp/yuki-nat
 ```
 
 This requires seccomp support; failure to install restrictions is a test failure, never a skipped pass. It proves `/proc/self/fd` reopening returns EACCES, then executes actual decoder generation twice and normalized BGE embeddings through shipping JNI with all pathname opens forbidden. It checks rejected malformed/unsafe descriptors and descriptor cleanup/borrowed ownership. The host-only restriction fixture is never linked into the Android APK. This simulates the access constraint; it does not assert Galaxy SELinux logs or physical acceptance.
+
+## Role timing regression — v0.2.2
+
+The host harness now asserts positive generated-token counts and separate preparation/generation timing whose sum is within rounding of the measured wall time. `prepare_contracts.py` also extracts the actual admission samples. Use `admission-system.txt` and `<role>-admission.txt` with the matching grammar to test short admission outputs. `VERIFIED_TIMING_RESULTS.json` records real Qwen1.5B samples and old/new 30-second calculation comparisons, not Galaxy admission. The host harness itself uses a 60-second bound. Short language/reasoning samples demonstrate the fixed-prompt penalty. The final synchronized host run completes all roles; separate slow-decode/deadline regression cases still reject, and no host throughput establishes Galaxy acceptance.

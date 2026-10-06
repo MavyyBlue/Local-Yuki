@@ -36,4 +36,19 @@ class AdaptiveResourceTest {
   assertNull(AdaptiveProfile.measuredOutput(p,0,0,10))
   assertNull(AdaptiveProfile.measuredOutput(p,30000,1000,100))
  }
+ @Test fun shortRepliesDoNotMultiplyFixedPromptCostPerGeneratedToken() {
+  val p=AdaptiveProfile.derive(body,now)!!
+  // Both samples decode at 10 tokens/s, with the same ten-second prompt preparation.
+  assertNull(AdaptiveProfile.measuredOutput(p,1000,12000,20)) // old combined-time calculation
+  assertEquals(114,AdaptiveProfile.measuredOutput(p,1000,2000,20,10000))
+  assertEquals(114,AdaptiveProfile.measuredOutput(p,1000,10000,100,10000))
+ }
+ @Test fun preparationStillConsumesDeadlineAndSlowDecodeStillRejects() {
+  val p=AdaptiveProfile.derive(body,now)!!
+  assertNull(AdaptiveProfile.measuredOutput(p,1000,10000,20,10000))
+  assertNull(AdaptiveProfile.measuredOutput(p,1000,100,100,29000))
+  assertNull(AdaptiveProfile.measuredOutput(p,1000,100,100,Long.MAX_VALUE))
+  assertNull(AdaptiveProfile.measuredOutput(p,1000,100,100,-1))
+  assertNull(AdaptiveProfile.measuredOutput(p.copy(output=16),1000,100,100,0))
+ }
 }

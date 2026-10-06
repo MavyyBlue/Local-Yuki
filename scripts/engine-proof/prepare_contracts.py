@@ -17,6 +17,12 @@ for role,enum,klass in [('one','SYSTEM_ONE','NeuralSystemOne'),('two','SYSTEM_TW
  fragment=cognition[cognition.index('internal class '+klass):]
  prompt=re.search(r'\n            "((?:[^"\\]|\\.)*)",',fragment).group(1)
  (out/(role+'-system.txt')).write_text(json.loads('"'+prompt+'"'))
+ # The admission samples are intentionally shorter than full conversation contracts.
+ admission=(root/'app/src/main/kotlin/com/mavyy/localyuki/admission/ModelSubsystem.kt').read_text()
+ pattern=(r'ModelRole\.'+enum+r'->' if role!='language' else r'else->')+r'"((?:[^"\\]|\\.)*)"'
+ sample=re.search(pattern,admission).group(1)
+ (out/(role+'-admission.txt')).write_text(json.loads('"'+sample+'"'))
+(out/'admission-system.txt').write_text('You are an advisory cognitive organ. Follow the bounded output contract; no tools or authority.')
 base={'identity':{'self':'Yuki','relationship':'Mavyy, primary partner','personality':['warmth, independent judgment, honesty, curiosity']},'ownerInput':'Hello, Yuki.','time':'2026-10-06T18:00:00Z','memories':[],'observations':[],'recentConversation':[],'ongoingContext':[],'affect':'neutral','uncertainty':[],'availableCapabilities':[]}
 (out/'one-user.json').write_text(json.dumps(base))
 base['ownerInput']='I have a headache. Is its cause certain?'

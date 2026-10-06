@@ -1,5 +1,12 @@
 # Local Yuki — Changelog
 
+## 2026-10-06 — 0.2.2 measured role timing
+
+- Count generated tokens directly and measure prompt preparation separately from generation, including sampling/grammar and decode. Reserve preparation/loading once before applying the existing 40% generation reserve and 64-token minimum.
+- Keep last and per-role benchmark snapshots, including rejection timings, mode, deadline and unload; surface detailed throughput rejection values.
+- Use the requested role's immutable admission receipt for context/output/threads/batch/peak limits, so later admission of another role cannot overwrite its envelope.
+- CPU adapter v3 requires fresh per-role measurements of existing imported weights. No signing, workflow, Lockdown, schema or continuity reset is required. Galaxy v0.2.1 SYSTEM_ONE admission is owner-reported; v0.2.2 device acceptance remains pending.
+
 ## 2026-10-06 — 0.2.1 isolated model descriptor loading
 
 - Replace `/proc/self/fd` pathname reopening with a borrowed POSIX descriptor API. Validate read-only regular files, duplicate/close internally, and parse GGUF metadata from the open stream. Preserve mmap and all resource/admission isolation.

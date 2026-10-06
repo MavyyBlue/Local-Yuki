@@ -4,7 +4,7 @@ Local Yuki is persistent app-owned identity, continuity, memory, affect, state, 
 
 Start with [current implementation and phase status](docs/architecture/OWNER_IMPLEMENTATION_2026-10-06.md), [current state](PROJECT_HANDOFF/CURRENT_STATE.md), [roadmap](ROADMAP.md) and [Galaxy acceptance](PROJECT_HANDOFF/PHONE_ACCEPTANCE.md). The [North Star](docs/architecture/YUKI_LOCAL_NORTH_STAR.md) remains the design goal, not a claim that every desired behavior has been physically accepted.
 
-Version 0.2.1 fixes isolated-process model loading by reading the owner-authorized descriptor directly. Existing imported files can be benchmarked again; no reimport or database reset is required. See [descriptor loading fix](PROJECT_HANDOFF/DESCRIPTOR_LOAD_FIX.md).
+Version 0.2.2 separates prompt preparation from generated-token timing, retains per-role accepted/rejected measurements and uses each role's own immutable runtime limits. CPU adapter v3 requires benchmarking each role again using the existing imported file. See [timing repair and Galaxy evidence](PROJECT_HANDOFF/TIMING_ADMISSION_FIX.md). The v0.2.1 descriptor loader has now passed owner-reported SYSTEM_ONE admission on Galaxy; other roles and conversation quality remain pending.
 
 ## Run and use
 

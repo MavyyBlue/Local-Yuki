@@ -1,0 +1,76 @@
+{
+  "scope": "Shipping JNI on Linux/JVM, not Galaxy throughput or Android admission. Host harness uses 2048 context/2 threads/64 batch/60s native bound. 30s budgets are calculation comparisons only. Async native work is synchronized at preparation and generation timing boundaries.",
+  "modelSha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+  "modelFileBytes": 1117320736,
+  "results": [
+    {
+      "role": "one",
+      "startupMs": 596,
+      "inferenceMs": 4524,
+      "preparationMs": 1701,
+      "generationMs": 2823,
+      "tokens": 56,
+      "oldPredictedBudgetAt30s": 218,
+      "newPredictedBudgetAt30s": 256,
+      "output": {
+        "route": "RESPOND",
+        "confidence": 90,
+        "salience": 30,
+        "intent": "conversation",
+        "affect": "neutral",
+        "meaning": [
+          "Hello, Mavyy. I am glad you are here."
+        ],
+        "uncertainty": [],
+        "sources": [
+          "input"
+        ],
+        "updates": []
+      },
+      "nativeTimingAssertions": "passed",
+      "unload": "completed"
+    },
+    {
+      "role": "language",
+      "startupMs": 521,
+      "inferenceMs": 1779,
+      "preparationMs": 1087,
+      "generationMs": 692,
+      "tokens": 14,
+      "oldPredictedBudgetAt30s": 139,
+      "newPredictedBudgetAt30s": 256,
+      "output": {
+        "text": "Hello, Mavyy.",
+        "pointIds": [
+          0
+        ]
+      },
+      "nativeTimingAssertions": "passed",
+      "unload": "completed"
+    },
+    {
+      "role": "two",
+      "startupMs": 545,
+      "inferenceMs": 2624,
+      "preparationMs": 1258,
+      "generationMs": 1366,
+      "tokens": 25,
+      "oldPredictedBudgetAt30s": 168,
+      "newPredictedBudgetAt30s": 256,
+      "output": {
+        "points": [
+          "The evidence is insufficient to confirm this."
+        ],
+        "uncertainty": [
+          "Unverified"
+        ],
+        "sources": [
+          "input"
+        ],
+        "actions": []
+      },
+      "nativeTimingAssertions": "passed",
+      "unload": "completed"
+    }
+  ]
+}

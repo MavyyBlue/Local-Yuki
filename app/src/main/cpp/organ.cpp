@@ -27,10 +27,12 @@ static void runtime_log(ggml_log_level level, const char * text, void *) {
 using Clock=std::chrono::steady_clock;
 struct Organ {
  llama_model * model=nullptr; llama_context * ctx=nullptr; Clock::time_point until; bool truncated=false;
+ int generated_tokens=0; long long preparation_ms=0, generation_ms=0;
  ~Organ(){if(ctx)llama_free(ctx);if(model)llama_model_free(model);}
 };
 static bool aborting(void * p){return Clock::now()>static_cast<Organ*>(p)->until;}
 static bool progress(float,void * p){return !aborting(p);}
+static long long elapsed_ms(Clock::time_point start){return (std::chrono::duration_cast<std::chrono::microseconds>(Clock::now()-start).count()+999)/1000;}
 static std::string bytes(JNIEnv*e,jbyteArray a){jsize n=e->GetArrayLength(a);std::string s(n,'\0');e->GetByteArrayRegion(a,0,n,reinterpret_cast<jbyte*>(s.data()));return s;}
 static void fail(JNIEnv*e,const char* s){e->ThrowNew(e->FindClass("java/lang/IllegalStateException"),s);}
 static Organ* get(jlong h){if(!h)throw std::runtime_error("unloaded organ");return reinterpret_cast<Organ*>(h);}
@@ -51,6 +53,7 @@ extern "C" JNIEXPORT jlong JNICALL Java_com_mavyy_localyuki_inference_NativeOrga
 extern "C" JNIEXPORT jbyteArray JNICALL Java_com_mavyy_localyuki_inference_NativeOrgan_generate(JNIEnv*e,jobject,jlong handle,jbyteArray system,jbyteArray user,jbyteArray grammar,jint maxTokens,jlong deadline){
  try{
   auto o=get(handle);o->until=Clock::now()+std::chrono::milliseconds(deadline);llama_kv_self_clear(o->ctx);
+  const auto preparation_start=Clock::now();o->generated_tokens=0;o->preparation_ms=0;o->generation_ms=0;
   std::string s=bytes(e,system),u=bytes(e,user),prompt;const char*tmpl=llama_model_chat_template(o->model,nullptr);
   std::vector<llama_token> t;o->truncated=false;
   for(int attempt=0;attempt<32;attempt++) {
@@ -64,6 +67,9 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_com_mavyy_localyuki_inference_Nativ
   }
   if(t.size()+maxTokens>=llama_n_ctx(o->ctx))throw std::runtime_error("context cannot fit safe budget");
   for(size_t pos=0;pos<t.size();){int count=std::min<size_t>(llama_n_batch(o->ctx),t.size()-pos);auto b=llama_batch_get_one(t.data()+pos,count);if(llama_decode(o->ctx,b))throw std::runtime_error("prefill failed or cancelled");pos+=count;}
+  // decode can enqueue work asynchronously; finish the prompt before starting the generation clock.
+  llama_synchronize(o->ctx);
+  o->preparation_ms=elapsed_ms(preparation_start);const auto generation_start=Clock::now();
   auto sampler=llama_sampler_chain_init(llama_sampler_chain_default_params());
   auto g=bytes(e,grammar);if(!g.empty()){auto constrained=llama_sampler_init_grammar(llama_model_get_vocab(o->model),g.c_str(),"root");if(!constrained){llama_sampler_free(sampler);throw std::runtime_error("runtime grammar rejected");}llama_sampler_chain_add(sampler,constrained);}
   llama_sampler_chain_add(sampler,llama_sampler_init_greedy());std::string out;
@@ -71,8 +77,9 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_com_mavyy_localyuki_inference_Nativ
    auto tok=llama_sampler_sample(sampler,o->ctx,-1);if(llama_vocab_is_eog(llama_model_get_vocab(o->model),tok))break;
    char piece[512];int len=llama_token_to_piece(llama_model_get_vocab(o->model),tok,piece,sizeof(piece),0,false);if(len<0||len>512){llama_sampler_free(sampler);throw std::runtime_error("invalid token piece");}out.append(piece,len);if(out.size()>16384)break;
    auto b=llama_batch_get_one(&tok,1);if(llama_decode(o->ctx,b)){llama_sampler_free(sampler);throw std::runtime_error("decode failed or cancelled");}
+   o->generated_tokens++;
   }
-  llama_sampler_free(sampler);if(aborting(o))throw std::runtime_error("inference deadline");
+  llama_sampler_free(sampler);llama_synchronize(o->ctx);o->generation_ms=elapsed_ms(generation_start);if(aborting(o))throw std::runtime_error("inference deadline");
   auto a=e->NewByteArray(out.size());e->SetByteArrayRegion(a,0,out.size(),reinterpret_cast<const jbyte*>(out.data()));return a;
  }catch(const std::exception&x){fail(e,x.what());return nullptr;}
 }
@@ -86,6 +93,6 @@ extern "C" JNIEXPORT jfloatArray JNICALL Java_com_mavyy_localyuki_inference_Nati
  }catch(const std::exception&x){fail(e,x.what());return nullptr;}
 }
 extern "C" JNIEXPORT jlongArray JNICALL Java_com_mavyy_localyuki_inference_NativeOrgan_metrics(JNIEnv*e,jobject,jlong h){
- auto o=get(h);rusage r{};getrusage(RUSAGE_SELF,&r);auto perf=llama_perf_context(o->ctx);jlong data[6]={static_cast<jlong>(llama_model_n_params(o->model)),static_cast<jlong>(llama_model_size(o->model)),r.ru_maxrss*1024LL,llama_n_ctx(o->ctx),perf.n_eval,o->truncated?1:0};auto a=e->NewLongArray(6);e->SetLongArrayRegion(a,0,6,data);return a;
+ auto o=get(h);rusage r{};getrusage(RUSAGE_SELF,&r);auto perf=llama_perf_context(o->ctx);jlong data[8]={static_cast<jlong>(llama_model_n_params(o->model)),static_cast<jlong>(llama_model_size(o->model)),r.ru_maxrss*1024LL,llama_n_ctx(o->ctx),o->generation_ms>0?o->generated_tokens:perf.n_eval,o->truncated?1:0,o->preparation_ms,o->generation_ms};auto a=e->NewLongArray(8);e->SetLongArrayRegion(a,0,8,data);return a;
 }
 extern "C" JNIEXPORT void JNICALL Java_com_mavyy_localyuki_inference_NativeOrgan_unload(JNIEnv*,jobject,jlong h){delete reinterpret_cast<Organ*>(h);}
