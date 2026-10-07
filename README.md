@@ -4,7 +4,7 @@ Local Yuki is persistent app-owned identity, continuity, memory, affect, state, 
 
 Start with [current implementation and phase status](docs/architecture/OWNER_IMPLEMENTATION_2026-10-06.md), [current state](PROJECT_HANDOFF/CURRENT_STATE.md), [roadmap](ROADMAP.md) and [Galaxy acceptance](PROJECT_HANDOFF/PHONE_ACCEPTANCE.md). The [North Star](docs/architecture/YUKI_LOCAL_NORTH_STAR.md) remains the design goal, not a claim that every desired behavior has been physically accepted.
 
-Version 0.2.4 bounds model prompt preparation after Galaxy System One failed before generation. It preserves complete owner input, uses smaller app-owned context projections and reports preparation progress on failure. Existing imported weights and CPU adapter v3 admissions remain. v0.2.3 exact-source CI passed, but its Galaxy conversation failed; v0.2.4 exact-source CI and owner conversation acceptance are pending. See [repair and acceptance](PROJECT_HANDOFF/PREFILL_FIX.md). The full North Star remains unaccepted.
+Version 0.2.6 includes the independent role deadlines and unchanged same-file inspection from v0.2.5, plus three fixes found by owner-requested independent agent reviews: queued conversation cancellation, clock-independent admission receipt selection and runtime retirement before the next bind. Existing models, v3 admissions and app-owned continuity remain. v0.2.4 exact-source CI passed; v0.2.6 exact-source CI and successful Galaxy conversation are pending. See [review, repair and retry](PROJECT_HANDOFF/AGENT_REVIEW_FIX.md). The full North Star remains incomplete.
 
 ## Run and use
 
@@ -20,6 +20,6 @@ Enable “Allow Local Yuki control” in Yuki Lockdown 1.8 settings, then grant 
 
 ## Mobile delivery
 
-Upload the complete `local-yuki-source.zip` at repository root using the existing mobile importer. No workflow or Lockdown replacement is needed for v0.2.4. Require the Android run's recorded exact tested commit to match the expanded source and its fixed certificate before installing.
+Upload the complete `local-yuki-source.zip` at repository root using the existing mobile importer. No workflow or Lockdown replacement is needed for v0.2.6. Require the Android run's recorded exact tested commit to match the expanded source and its fixed certificate before installing.
 
 Vault transfers continuity without model weights or signing secrets. Historical schemas migrate before validation. After restore, review/regrant Android capabilities and autonomy, reimport/readmit models, and remeasure the new phone. Physical acceptance and second-device migration remain owner checks; automated verification does not assert them complete.

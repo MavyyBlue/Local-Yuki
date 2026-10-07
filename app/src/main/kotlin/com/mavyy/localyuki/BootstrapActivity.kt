@@ -91,11 +91,13 @@ class BootstrapActivity : Activity() {
         }
         column.addView(input,LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT))
         column.addView(button("Send") {
-            val text=input.text.toString().trim();task {
+            val text=input.text.toString().trim()
+            val epoch=com.mavyy.localyuki.inference.NativeSupervisor.cancellationEpoch()
+            task(epoch) {
                 when(val result=brain.saveInput(text)) {
                     is FoundationResult.Success -> {
                         show("Yuki is thinking within the current resource budget…")
-                        when(val reply=brain.converse(result.value)) {
+                        when(val reply=brain.converse(result.value,epoch)) {
                             is FoundationResult.Success-> { lastExpression=reply.value.text;show(reply.value.text) }
                             else->showConversationFailure()
                         }
@@ -217,9 +219,12 @@ class BootstrapActivity : Activity() {
             else -> showFailure(result)
         }
     } }
-    private fun task(operation: () -> Unit) {
+    private fun task(epoch:Long?=null,operation: () -> Unit) {
         if(worker.isShutdown) return
         worker.execute { ContinuityAccess.exclusive {
+            // Stop/background/pressure invalidates pending cognition as well as the active organ.
+            // Ordinary owner persistence tasks retain their place in the queue.
+            if(epoch!=null && epoch!=com.mavyy.localyuki.inference.NativeSupervisor.cancellationEpoch()) return@exclusive
             try { operation();refresh() } catch (_: Exception) { show("The operation could not complete. Existing continuity was preserved.") }
         } }
     }
@@ -362,7 +367,7 @@ class BootstrapActivity : Activity() {
     } })
     private fun voiceMenu()=choices("Local voice",listOf(
         "Wake phrase while this app is visible" to { if(com.mavyy.localyuki.embodiment.ForegroundWakePhrase.enabled){com.mavyy.localyuki.embodiment.ForegroundWakePhrase.stop();show("Wake phrase disabled.")}else {
-            com.mavyy.localyuki.embodiment.ForegroundWakePhrase.start(this,{ text ->input.setText(text);task { when(val source=brain.saveInput(text)){is FoundationResult.Success->when(val reply=brain.converse(source.value)){is FoundationResult.Success->{lastExpression=reply.value.text;show(reply.value.text)};else->showConversationFailure()};else->showFailure(source)} } },::show)
+            com.mavyy.localyuki.embodiment.ForegroundWakePhrase.start(this,{ text ->input.setText(text);val epoch=com.mavyy.localyuki.inference.NativeSupervisor.cancellationEpoch();task(epoch) { when(val source=brain.saveInput(text)){is FoundationResult.Success->when(val reply=brain.converse(source.value,epoch)){is FoundationResult.Success->{lastExpression=reply.value.text;show(reply.value.text)};else->showConversationFailure()};else->showFailure(source)} } },::show)
             show("Foreground wake phrase enabled. Start with Yuki. This uses offline speech recognition and stops when you leave this app or resources become constrained.")
         } },
         "Listen on device" to { if(checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)!=android.content.pm.PackageManager.PERMISSION_GRANTED){requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO),51)}else {

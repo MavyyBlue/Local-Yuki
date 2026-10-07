@@ -37,4 +37,27 @@ class AdmissionLedgerTest {
    assertEquals(32,runtimeProfileForRole(current,receipt,9000,32).output)
   }
  }}
+ private fun orderedReceipts(older:Instant,newer:Instant,verify:(BrainRuntime,JSONObject)->Unit={_,_->}) {
+  BrainRuntime(context).use { b->
+   assertTrue(b.open());val candidate=prepare(b)
+   val broad=JSONObject().put("context",4096).put("output",200).put("threads",4).put("batch",64)
+       .put("lastBenchmark",JSONObject().put("deadlineMs",30000))
+   val restrictive=JSONObject().put("context",512).put("output",69).put("threads",1).put("batch",16)
+       .put("lastBenchmark",JSONObject().put("deadlineMs",12000))
+   BrainDatabase(context).use { db->
+    for((id,time,manifest) in listOf(Triple("z-older",older,broad),Triple("a-newer",newer,restrictive)))
+     ok(db.write { it.execSQL("INSERT INTO organ_receipt VALUES(?,?,?,?,?,?,?)",arrayOf<Any>(id,candidate.id,ModelRole.SYSTEM_ONE.name,1,"fixture",time.toString(),manifest.toString()));true })
+   }
+   val receipt=ok(b.models.admissionReceipt(candidate.id,ModelRole.SYSTEM_ONE))
+   assertEquals(69,receipt.getInt("output"));verify(b,receipt)
+  }
+ }
+ @Test fun latestReceiptSurvivesBackwardsAdmissionClock()=orderedReceipts(Instant.parse("2026-10-07T01:00:00Z"),Instant.parse("2026-10-07T00:59:00Z"))
+ @Test fun latestReceiptSurvivesExactSecondFractionalLexicalInversion()=orderedReceipts(Instant.parse("2026-10-07T01:00:00Z"),Instant.parse("2026-10-07T01:00:00.123Z"))
+ @Test fun tiedAdmissionTimestampsUseInsertionOrderRatherThanReceiptIds()=orderedReceipts(Instant.parse("2026-10-07T01:00:00Z"),Instant.parse("2026-10-07T01:00:00Z"))
+ @Test fun latestReceiptRetainsRestrictiveRuntimeEnvelope()=orderedReceipts(Instant.parse("2026-10-07T01:00:00Z"),Instant.parse("2026-10-07T00:59:00Z")) { _,receipt->
+  val current=SafeRuntimeProfile(4096,256,4,64,4,30000,1024*ResourceGovernor.MIB,OperatingMode.INTERACTIVE)
+  val bounded=runtimeProfileForRole(current,receipt,90000)
+  assertEquals(512,bounded.context);assertEquals(69,bounded.output);assertEquals(1,bounded.threads);assertEquals(16,bounded.batch);assertEquals(12000L,bounded.deadlineMillis)
+ }
 }

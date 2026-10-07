@@ -38,9 +38,11 @@ public final class NativeOrgan {
      }
      users=u.toArray(new byte[0][]);grammars=g.toArray(new byte[0][]);shortened=new boolean[f.size()];for(int i=0;i<f.size();i++)shortened[i]=f.get(i);
     }
+    long remaining=deadline-(System.nanoTime()-start)/1000000;
+    if(remaining<=0)throw new AssertionError("Startup exhausted organ deadline");
     String output=new String(Boolean.getBoolean("yuki.production")?
-      organ.generateBounded(h,utf(system),users,grammars,shortened,outputLimit,Integer.getInteger("yuki.promptLimit",256),deadline):
-      organ.generate(h,utf(system),utf(user),grammar,outputLimit,deadline),StandardCharsets.UTF_8);
+      organ.generateBounded(h,utf(system),users,grammars,shortened,outputLimit,Integer.getInteger("yuki.promptLimit",256),remaining):
+      organ.generate(h,utf(system),utf(user),grammar,outputLimit,remaining),StandardCharsets.UTF_8);
     long inferenceMs=(System.nanoTime()-inferenceStart)/1000000;
     long[] metrics=organ.metrics(h);
     if(metrics.length<8||metrics[4]<=0||metrics[6]<=0||metrics[7]<=0||metrics[6]+metrics[7]>inferenceMs+3)

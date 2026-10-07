@@ -15,32 +15,34 @@ import java.util.UUID
 internal interface OrganAdapter {
     val id:String;val version:Int
     fun supports(model:ModelDescriptor,metadata:GgufMetadata):Boolean
-    fun execute(file:File,profile:SafeRuntimeProfile,system:String,user:String,embedding:Boolean,grammar:String,safe:()->Boolean,epoch:Long,prompts:List<OrganPrompt>?=null):OrganResult
+    fun execute(file:File,profile:SafeRuntimeProfile,system:String,user:String,embedding:Boolean,grammar:String,safe:()->Boolean,epoch:Long,prompts:List<OrganPrompt>?=null,descriptorCheck:((java.io.FileDescriptor)->Unit)?=null):OrganResult
 }
 internal class CpuGgufAdapter(context:Context):OrganAdapter {
     override val id="llama-cpp-cpu-b5046";override val version=3
     private val native=NativeSupervisor(context)
     override fun supports(model:ModelDescriptor,metadata:GgufMetadata)=model.format==ModelFormat.GGUF && metadata.parameters>0
-    override fun execute(file:File,profile:SafeRuntimeProfile,system:String,user:String,embedding:Boolean,grammar:String,safe:()->Boolean,epoch:Long,prompts:List<OrganPrompt>?)=native.run(file,profile,system,user,embedding,grammar,safe,epoch,prompts)
+    override fun execute(file:File,profile:SafeRuntimeProfile,system:String,user:String,embedding:Boolean,grammar:String,safe:()->Boolean,epoch:Long,prompts:List<OrganPrompt>?,descriptorCheck:((java.io.FileDescriptor)->Unit)?)=native.run(file,profile,system,user,embedding,grammar,safe,epoch,prompts,descriptorCheck)
 }
 data class OwnerModel(val id:String,val manifest:JSONObject,val activeRoles:Set<ModelRole>)
 /** A shared file can have different measured limits for each independently admitted role. */
 internal fun runtimeProfileForRole(current:SafeRuntimeProfile,receipt:JSONObject,remaining:Long,maxOutput:Int?=null):SafeRuntimeProfile =
-    current.copy(deadlineMillis=minOf(current.deadlineMillis,remaining),context=minOf(current.context,receipt.getInt("context")),
+    current.copy(deadlineMillis=minOf(current.deadlineMillis,remaining,receipt.optJSONObject("lastBenchmark")?.optLong("deadlineMs",current.deadlineMillis)?:current.deadlineMillis),context=minOf(current.context,receipt.getInt("context")),
         output=minOf(current.output,receipt.getInt("output"),maxOutput?:current.output),threads=minOf(current.threads,receipt.getInt("threads")),
         batch=minOf(current.batch,receipt.getInt("batch")))
-/** Trusted model lifecycle. Every inference rechecks file integrity, receipt, actual body and a lease. */
+/** Trusted model lifecycle. Every inference checks file identity, receipt, actual body and a lease. */
 class ModelSubsystem(context:Context,private val governor:ResourceGovernor):AutoCloseable {
     private val app=context.applicationContext
     private val root=File(app.filesDir,"model-organs").apply { mkdirs() }
     private val db=BrainDatabase(app);private val probe=AndroidResourceProbe(app)
     private val adapters:List<OrganAdapter> = listOf(CpuGgufAdapter(app))
-    private data class TurnBudget(var remaining:Int,val until:Long,val epoch:Long)
-    private val turnBudget=ThreadLocal<TurnBudget>()
-    internal fun beginTurn() { observe();val p=governor.profile(Instant.now())?:error("Cognition deferred by body")
-        turnBudget.set(TurnBudget(p.maxPasses,android.os.SystemClock.elapsedRealtime()+p.deadlineMillis,NativeSupervisor.cancellationEpoch())) }
+    private val turnBudget=ThreadLocal<CognitiveTurnBudget>()
+    internal fun beginTurn(epoch:Long=NativeSupervisor.cancellationEpoch()) {
+        NativeSupervisor.requireActive(epoch)
+        observe();val p=governor.profile(Instant.now())?:error("Cognition deferred by body")
+        NativeSupervisor.requireActive(epoch)
+        turnBudget.set(CognitiveTurnBudget(p,android.os.SystemClock.elapsedRealtime(),epoch)) }
     internal fun endTurn()=turnBudget.remove()
-    internal fun checkTurnActive() { turnBudget.get()?.let { NativeSupervisor.requireActive(it.epoch) } }
+    internal fun checkTurnActive() { turnBudget.get()?.let { NativeSupervisor.requireActive(it.epoch);check(android.os.SystemClock.elapsedRealtime()<it.until) { "Cognitive turn deadline exhausted" } } }
     @Volatile var lastFailure:String="";private set
     @Volatile internal var lastInference:JSONObject?=null;private set
     internal fun clearInferenceDiagnostic() { lastInference=null }
@@ -71,9 +73,13 @@ class ModelSubsystem(context:Context,private val governor:ResourceGovernor):Auto
     private fun model(id:String):OwnerModel=(models() as? FoundationResult.Success)?.value?.singleOrNull { it.id==id } ?: error("model absent")
     private fun inspect(model:OwnerModel,role:ModelRole):Pair<ModelDescriptor,GgufMetadata> {
         require(!model.manifest.optBoolean("removed"))
-        val expected=descriptor(model,role);val fresh=ModelFiles.inspect(File(root,model.id),model.id,role)
-        check(fresh is FoundationResult.Success && fresh.value==expected) { "Model hash/size changed or weights are absent; reimport and readmit" }
-        return expected to GgufInspector.inspect(File(root,model.id))
+        val expected=descriptor(model,role);val file=File(root,model.id)
+        val verify={
+            val fresh=ModelFiles.inspect(file,model.id,role)
+            check(fresh is FoundationResult.Success && fresh.value==expected) { "Model hash/size changed or weights are absent; reimport and readmit" }
+            expected to GgufInspector.inspect(file)
+        }
+        return turnBudget.get()?.inspections?.inspect(file,expected,verify)?:verify()
     }
     private fun observe():DeviceResources {
         val result=probe.read(com.mavyy.localyuki.resource.OwnerVisibility.active,Instant.now());check(result is FoundationResult.Success) { "Resource measurements unavailable" }
@@ -160,6 +166,11 @@ class ModelSubsystem(context:Context,private val governor:ResourceGovernor):Auto
         sql.execSQL("UPDATE organ_manifest SET json=? WHERE id=?",arrayOf(model.manifest.toString(),model.id))
         sql.execSQL("INSERT OR REPLACE INTO organ_role VALUES(?,?)",arrayOf(role.name,model.id));true
     }
+    /** Append-only ordinary SQLite table: rowid follows insertion, regardless of clock or UUID order. */
+    internal fun admissionReceipt(id:String,role:ModelRole):FoundationResult<JSONObject> = db.read { sql->
+        db.rows(sql,"SELECT manifest FROM organ_receipt WHERE model_id=? AND role=? AND accepted=1 ORDER BY rowid DESC LIMIT 1",id,role.name)
+            .firstOrNull()?.first()?.let(::JSONObject) ?: error("Admission receipt missing")
+    }
     private fun execute(model:OwnerModel,role:ModelRole,profile:SafeRuntimeProfile,system:String,user:String,estimate:Long,adapter:OrganAdapter,epoch:Long=turnBudget.get()?.epoch ?: NativeSupervisor.cancellationEpoch()):OrganResult {
         NativeSupervisor.requireActive(epoch)
         val id="infer-${UUID.randomUUID()}";val lease=governor.reserve(Workload(id,estimate,profile.deadlineMillis,true),Instant.now())
@@ -168,24 +179,25 @@ class ModelSubsystem(context:Context,private val governor:ResourceGovernor):Auto
             val result=probe.read(com.mavyy.localyuki.resource.OwnerVisibility.active,Instant.now())
             result is FoundationResult.Success && result.value.foreground && result.value.thermal!=ThermalPressure.UNKNOWN && result.value.thermal<ThermalPressure.MODERATE && !result.value.lowMemory &&
                 result.value.availableBytes>512*ResourceGovernor.MIB && (result.value.charging||(result.value.batteryPercent?:0)>5) && !result.value.powerSave && epoch==NativeSupervisor.cancellationEpoch()
-        },epoch,if(role==ModelRole.EMBEDDING)null else PromptPreparation.candidates(role,user,profile.output)) } finally { governor.release(id) }
+        },epoch,if(role==ModelRole.EMBEDDING)null else PromptPreparation.candidates(role,user,profile.output),turnBudget.get()?.let { b->{ fd:java.io.FileDescriptor->b.inspections.requireSameDescriptor(File(root,model.id),fd) } }) } finally { governor.release(id) }
     }
     internal fun infer(role:ModelRole,system:String,user:String,maxOutput:Int?=null):OrganResult {
         lastInference=JSONObject().put("role",role.name).put("previousPass",if(turnBudget.get()!=null)lastInference else null)
         checkTurnActive()
-        turnBudget.get()?.let { b->check(b.remaining>0 && android.os.SystemClock.elapsedRealtime()<b.until) { "Cognitive pass/time budget exhausted" };b.remaining-- }
+        turnBudget.get()?.startPass(android.os.SystemClock.elapsedRealtime())
         val active=(models() as? FoundationResult.Success)?.value?.singleOrNull { role in it.activeRoles }?:error("No admitted $role model enabled")
         val integrityStart=android.os.SystemClock.elapsedRealtime()
-        val (d,m)=inspect(active,role);lastInference?.put("integrityMs",android.os.SystemClock.elapsedRealtime()-integrityStart);require(active.manifest.getJSONArray("acceptedRoles").let { a->(0 until a.length()).any { a.getString(it)==role.name } })
+        val (d,m)=inspect(active,role);lastInference?.put("integrityMs",android.os.SystemClock.elapsedRealtime()-integrityStart)?.put("integrityReused",turnBudget.get()?.inspections?.reused==true);require(active.manifest.getJSONArray("acceptedRoles").let { a->(0 until a.length()).any { a.getString(it)==role.name } })
         val adapter=adapters.singleOrNull { it.id==active.manifest.getString("adapter")&&it.version==active.manifest.getInt("adapterVersion")&&it.supports(d,m) }?:error("Adapter version unavailable; readmit")
-        val proof=db.read { sql->db.rows(sql,"SELECT manifest FROM organ_receipt WHERE model_id=? AND role=? AND accepted=1 ORDER BY created DESC,id DESC LIMIT 1",active.id,role.name).firstOrNull()?.first()?.let(::JSONObject) ?: error("Admission receipt missing") }
+        val proof=admissionReceipt(active.id,role)
         require(proof is FoundationResult.Success && proof.value.getString("sha256")==d.sha256 && proof.value.getString("adapter")==adapter.id && proof.value.getInt("adapterVersion")==adapter.version) { "Admission receipt does not authorize this engine" }
         val admitted=proof.value
         observe();val current=governor.profile(Instant.now(),admitted.getLong("peakBytes"))?:error("Resource pressure deferred cognition")
-        val remaining=turnBudget.get()?.let { it.until-android.os.SystemClock.elapsedRealtime() } ?: current.deadlineMillis
+        turnBudget.get()?.requireCurrentProfile(current)
+        val remaining=turnBudget.get()?.remaining(android.os.SystemClock.elapsedRealtime()) ?: current.deadlineMillis
         check(remaining>=1000) { "Cognitive turn deadline exhausted" }
         val p=runtimeProfileForRole(current,admitted,remaining,maxOutput)
-        lastInference?.put("mode",p.mode.name)?.put("outputLimit",p.output)?.put("context",p.context)?.put("deadlineMs",p.deadlineMillis)
+        lastInference?.put("mode",p.mode.name)?.put("outputLimit",p.output)?.put("context",p.context)?.put("deadlineMs",p.deadlineMillis)?.put("turnRemainingMs",remaining)?.put("turnLimitMs",turnBudget.get()?.totalMillis)
         val boundedSystem=system+"\nOutput limit: ${p.output} tokens. Brief, complete JSON."
         val result=try { execute(active,role,p,boundedSystem,user,m.estimatedMemory(d.fileBytes,p.context),adapter) }catch(e:OrganExecutionFailure) { recordPreparation(e.measurement);throw e }
         lastInference?.put("startupMs",result.startupMs)?.put("preparationMs",result.preparationMs)?.put("generationMs",result.generationMs)?.put("generatedTokens",result.tokens)?.put("outputLimitReached",result.tokens>=p.output)?.put("contextShortened",result.contextTruncated)?.put("unloadVerified",result.unloaded)

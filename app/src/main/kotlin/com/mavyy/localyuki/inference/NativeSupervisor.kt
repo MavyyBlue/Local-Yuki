@@ -16,6 +16,7 @@ internal class NativeSupervisor(context:Context) {
     private val app=context.applicationContext
     companion object {
         private val lock=ReentrantLock()
+        private val retirement=RuntimeRetirementGate()
         private val cancellation=java.util.concurrent.atomic.AtomicLong()
         fun cancellationEpoch():Long=cancellation.get()
         fun requireActive(epoch:Long) { check(epoch==cancellation.get()) { "Cognitive operation cancelled" } }
@@ -27,38 +28,50 @@ internal class NativeSupervisor(context:Context) {
         }
     }
     fun run(file:File,profile:SafeRuntimeProfile,system:String,user:String,embedding:Boolean=false,grammar:String="",
-        safe:()->Boolean,epoch:Long=cancellationEpoch(),prompts:List<OrganPrompt>?=null):OrganResult {
+        safe:()->Boolean,epoch:Long=cancellationEpoch(),prompts:List<OrganPrompt>?=null,descriptorCheck:((java.io.FileDescriptor)->Unit)?=null):OrganResult {
         requireActive(epoch)
         check(Looper.myLooper()!=Looper.getMainLooper()) { "Inference must run off the UI thread" }
         check(lock.tryLock()) { "cognition already active" }
-        val connected=CompletableFuture<Messenger>();val response=CompletableFuture<Bundle>()
+        val connected=CompletableFuture<Pair<Messenger,RuntimeDeath>>();val response=CompletableFuture<Bundle>()
         val incoming=Messenger(object:Handler(Looper.getMainLooper()) { override fun handleMessage(m:Message) { response.complete(m.data) } })
         val connection=object:ServiceConnection {
-            override fun onServiceConnected(name:ComponentName,service:IBinder) { connected.complete(Messenger(service)) }
+            override fun onServiceConnected(name:ComponentName,service:IBinder) {
+                val death=RuntimeDeath(service)
+                if(!connected.complete(Messenger(service) to death))death.detach()
+            }
             override fun onServiceDisconnected(name:ComponentName) { response.completeExceptionally(IllegalStateException("runtime process died")) }
             override fun onBindingDied(name:ComponentName) { response.completeExceptionally(IllegalStateException("runtime binding died")) }
             override fun onNullBinding(name:ComponentName) { connected.completeExceptionally(IllegalStateException("runtime unavailable")) }
         }
-        var bound=false;var remote:Messenger?=null
-        val monitor=Executors.newSingleThreadScheduledExecutor()
+        var bound=false;var remote:Messenger?=null;var death:RuntimeDeath?=null
+        var monitor:ScheduledExecutorService?=null
+        val until=SystemClock.elapsedRealtime()+profile.deadlineMillis
+        fun remaining()=(until-SystemClock.elapsedRealtime()).also { check(it>0) { "Cognitive organ deadline exhausted" } }
         try {
+            retirement.requireReady();val scheduler=Executors.newSingleThreadScheduledExecutor();monitor=scheduler
             requireActive(epoch);check(safe());bound=app.bindService(Intent(app,OrganService::class.java),connection,Context.BIND_AUTO_CREATE or Context.BIND_WAIVE_PRIORITY);check(bound)
-            remote=connected.get(10,TimeUnit.SECONDS);requireActive(epoch);active=remote;pending=response
+            val runtime=connected.get(minOf(10000L,remaining()),TimeUnit.MILLISECONDS)
+            val runtimeRemote=runtime.first
+            remote=runtimeRemote;death=runtime.second;requireActive(epoch);active=remote;pending=response
             val request=Bundle().apply {
-                putParcelable("fd",ParcelFileDescriptor.open(file,ParcelFileDescriptor.MODE_READ_ONLY))
                 putInt("context",profile.context);putInt("threads",profile.threads);putInt("batch",profile.batch);putInt("output",profile.output)
-                putLong("deadline",profile.deadlineMillis);putString("system",system);putString("user",if(embedding)user else "");putBoolean("embedding",embedding);putString("grammar",grammar)
+                putLong("deadline",remaining());putString("system",system);putString("user",if(embedding)user else "");putBoolean("embedding",embedding);putString("grammar",grammar)
                 if(!embedding) {
                     val plan=prompts?:listOf(OrganPrompt(user,grammar,false))
                     putStringArray("users",plan.map { it.user }.toTypedArray());putStringArray("grammars",plan.map { it.grammar }.toTypedArray());putBooleanArray("shortened",plan.map { it.shortened }.toBooleanArray())
                     putInt("promptLimit",minOf(if(profile.deadlineMillis>=15000)256 else 192,profile.context-profile.output-1))
                 }
             }
-            @Suppress("DEPRECATION") val fd=request.getParcelable<ParcelFileDescriptor>("fd")!!
+            val fd=ParcelFileDescriptor.open(file,ParcelFileDescriptor.MODE_READ_ONLY)
+            try {
+                descriptorCheck?.invoke(fd.fileDescriptor);requireActive(epoch)
+                val runtimeDeadline=remaining().also { check(it>=1000) { "Cognitive organ deadline exhausted" } }
+                request.putParcelable("fd",fd);request.putLong("deadline",runtimeDeadline)
+                runtimeRemote.send(Message.obtain(null,1).apply { data=request;replyTo=incoming })
+            } finally { fd.close() }
+            scheduler.scheduleAtFixedRate({ if(!safe()) { response.completeExceptionally(IllegalStateException("resource pressure interrupted runtime"));try { runtimeRemote.send(Message.obtain(null,2)) } catch(_:Exception){} } },1,1,TimeUnit.SECONDS)
+            val b=response.get(remaining()+1000,TimeUnit.MILLISECONDS)
             requireActive(epoch)
-            try { remote.send(Message.obtain(null,1).apply { data=request;replyTo=incoming }) } finally { fd.close() }
-            monitor.scheduleAtFixedRate({ if(!safe()) { response.completeExceptionally(IllegalStateException("resource pressure interrupted runtime"));try { remote.send(Message.obtain(null,2)) } catch(_:Exception){} } },1,1,TimeUnit.SECONDS)
-            val b=response.get(profile.deadlineMillis+6000,TimeUnit.MILLISECONDS)
             if(!b.getBoolean("success")) {
                 val m=b.getLongArray("metrics")?:LongArray(11)
                 fun at(i:Int)=m.getOrElse(i){0}
@@ -71,8 +84,17 @@ internal class NativeSupervisor(context:Context) {
             val preparationMs=if(embedding)0 else maxOf(m[6],inferenceMs-m[7])
             return OrganResult(b.getString("text"),b.getFloatArray("vector"),b.getLong("startupMs"),inferenceMs,m[0],m[1],m[2],m[3].toInt(),true,m[4].toInt(),m[5]==1L,preparationMs,m[7],m.getOrElse(8){0}.toInt(),m.getOrElse(9){0}.toInt(),m.getOrElse(10){0}.toInt())
         } finally {
-            try { remote?.send(Message.obtain(null,2)) } catch(_:Exception){}
-            active=null;pending=null;monitor.shutdownNow();if(bound)app.unbindService(connection);lock.unlock()
+            try {
+                // Fence late connection callbacks, and also retire a connection that won the timeout race.
+                if(remote==null) {
+                    connected.cancel(false)
+                    if(!connected.isCompletedExceptionally)connected.getNow(null)?.let { remote=it.first;death=it.second }
+                }
+                active=null;pending=null;monitor?.shutdownNow()
+                death?.let { retirement.retire(it,1000) { remote?.send(Message.obtain(null,2)) } }
+            } finally {
+                try { if(bound)app.unbindService(connection) }finally { lock.unlock() }
+            }
         }
     }
 }

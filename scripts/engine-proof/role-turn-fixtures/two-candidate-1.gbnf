@@ -1,0 +1,12 @@
+root ::= "{" ws "\"points\":" ws meaning ws ",\"uncertainty\":" ws strings ws ",\"sources\":" ws sources ws ",\"actions\":" ws actions ws "}" ws
+actions ::= "[" ws "]"
+action ::= "{" ws "\"capability\":" ws string ws ",\"payload\":" ws string ws ",\"targetPackage\":" ws (string | "null") ws ",\"notBefore\":" ws (string | "null") ws "}"
+ws ::= ""
+string ::= "\"" character character* "\""
+character ::= [^"\\\x00-\x1F] | "\\" (["\\/bfnrt] | "u" [0-9a-fA-F]{4})
+strings ::= "[" ws (string (ws "," ws string){0,7})? ws "]"
+meaning ::= "[" ws string (ws "," ws string){0,5} ws "]"
+number ::= "100" | [1-9] [0-9]? | "0"
+source ::= "\"input\""
+sources ::= "[" ws source (ws "," ws source){0,7} ws "]"
+affect ::= "\"neutral\"" | "\"warmth\"" | "\"concern\"" | "\"curiosity\"" | "\"frustration\""

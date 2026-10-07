@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "backend": "shipping JNI CPU, host only",
+  "outputLimit": 64,
+  "greetingWallMs": 11879,
+  "turnDeadlineMs": 120000,
+  "organDeadlineMs": 30000,
+  "hostProfile": {
+    "context": 2048,
+    "threads": 2,
+    "batch": 64,
+    "longDeadlinePromptCap": 256,
+    "shortDeadlinePromptCap": 192
+  },
+  "greetingIncludesTwoSequentialOrgans": true,
+  "systemTwoProof": "separate uncertain-question execution, not a complete deep-reasoning turn",
+  "modelSha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+  "fixtureSha256": {
+    "one-full-user.json": "ebc51ccf046af8ab04697c44497b4b0abfbf6914a797f8540a53a74ca3107b33",
+    "one-full.gbnf": "eed19ba21fa17476e771d1ee332962cfea0b73b602c7026ae3a0238a064af5e1",
+    "one-system.txt": "85d42038b7b77ef613063c0851b1c3671e9816f60336e04badeb9a2ee82f04a5",
+    "one-candidate-3.gbnf": "eed19ba21fa17476e771d1ee332962cfea0b73b602c7026ae3a0238a064af5e1",
+    "one-candidate-0-shortened.txt": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa",
+    "one-candidate-3-user.json": "47f3171632da55ff516d8461ab0ce0529f1b6319255fffde94bac98d665a9fac",
+    "one-candidate-0.gbnf": "eed19ba21fa17476e771d1ee332962cfea0b73b602c7026ae3a0238a064af5e1",
+    "one-candidate-1.gbnf": "eed19ba21fa17476e771d1ee332962cfea0b73b602c7026ae3a0238a064af5e1",
+    "one-candidate-0-user.json": "ebc51ccf046af8ab04697c44497b4b0abfbf6914a797f8540a53a74ca3107b33",
+    "one-candidate-2-user.json": "5b1bd0afa9c3741f696205827b73759e91bf8334dff872b731c086c4d33d622d",
+    "one-candidate-1-shortened.txt": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b",
+    "one-candidate-3-shortened.txt": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b",
+    "one-candidate-2-shortened.txt": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b",
+    "one-candidate-2.gbnf": "eed19ba21fa17476e771d1ee332962cfea0b73b602c7026ae3a0238a064af5e1",
+    "one-candidate-1-user.json": "bc259af2a07eec066d395decec2084a1eed9d362f97fbeb1022e8450336f2002",
+    "language-full-user.json": "cb2c0d304facd17fc77c2fb72b972bb98f79671e62b6a949fa2b76aca7ff6e50",
+    "language-full.gbnf": "2364c751fe546fe4ad4dc8970ba32ff74b701830f05539785be45bf1cd77ca3a",
+    "language-system.txt": "623d9e1b41d729d6d27fee753d20ae8671af725d5adb51b7fc644a4c0c2fd998",
+    "two-full-user.json": "1216b5a949fc399536b01a3616acab2a9d002941d972e33e3932ced298ee3cfc",
+    "two-full.gbnf": "7f54798e3bebfc3c4d59d231f06c30d8af084588ea70c56f599be3507899bd17",
+    "two-system.txt": "e36080fb46e458c2e2607963d4612b57e9ccf10cb5cb9ce07cadf3cff5bce3fe",
+    "two-candidate-1-shortened.txt": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b",
+    "two-candidate-0.gbnf": "f2d10ada1d7d6b0c46655696d1b41338daa56dca0be209cd4159f1908f23b075",
+    "two-candidate-0-user.json": "1216b5a949fc399536b01a3616acab2a9d002941d972e33e3932ced298ee3cfc",
+    "two-candidate-0-shortened.txt": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa",
+    "two-candidate-1-user.json": "ace231468479457dee1f4e3dd20d0b26677ee43cbf18e9ef01b75025c6f65b77",
+    "two-candidate-1.gbnf": "61320207ffd37fa62f92bc04a9553abfd662a143d0dabbfb100afa2345944337"
+  },
+  "measurements": {
+    "SYSTEM_ONE": {
+      "startupMs": 627,
+      "inferenceMs": 5953,
+      "preparationMs": 3847,
+      "generationMs": 2104,
+      "generatedTokens": 34,
+      "deadlineMs": 30000,
+      "promptTokens": 227,
+      "decodedPromptTokens": 227,
+      "selectedCandidate": 3,
+      "contextShortened": true
+    },
+    "LANGUAGE_EXPRESSION": {
+      "startupMs": 651,
+      "inferenceMs": 4367,
+      "preparationMs": 2774,
+      "generationMs": 1592,
+      "generatedTokens": 23,
+      "deadlineMs": 30000,
+      "promptTokens": 109,
+      "decodedPromptTokens": 109,
+      "selectedCandidate": 0,
+      "contextShortened": false
+    },
+    "SYSTEM_TWO": {
+      "startupMs": 755,
+      "inferenceMs": 8498,
+      "preparationMs": 6047,
+      "generationMs": 2448,
+      "generatedTokens": 38,
+      "deadlineMs": 30000,
+      "promptTokens": 224,
+      "decodedPromptTokens": 224,
+      "selectedCandidate": 1,
+      "contextShortened": true
+    }
+  },
+  "outputs": {
+    "SYSTEM_ONE": "{\"route\":\"RESPOND\",\"confidence\":90,\"affect\":\"warmth\",\"meaning\":[\"Hello, Mavyy.\"],\"uncertainty\":[],\"sources\":[\"input\"]}",
+    "LANGUAGE_EXPRESSION": "{\"text\":\"\\nHello, Mavyy.\\n\\n[uncertain]\",\"pointIds\":[0]}",
+    "SYSTEM_TWO": "{\"points\":[\"The cause of your headache is uncertain based on the limited information provided.\"],\"uncertainty\":[\"Sources: None provided\"],\"sources\":[\"input\"],\"actions\":[]}"
+  },
+  "galaxyAcceptance": "pending"
+}

@@ -168,10 +168,10 @@ class BrainRuntime(context: Context,private val temporal: com.mavyy.localyuki.fo
             (memory.getEvidence(ref) as? FoundationResult.Success)?.value?.let { e->"${e.ref.sourceKind}: ${e.payload}" }
         };else->emptyList()
     }
-    fun converse(input:RawEvidence):FoundationResult<Expression> {
+    fun converse(input:RawEvidence,epoch:Long=com.mavyy.localyuki.inference.NativeSupervisor.cancellationEpoch()):FoundationResult<Expression> {
         conversationDiagnostic.reset();models.clearInferenceDiagnostic()
         conversationDiagnostic.enter("Resource preparation")
-        val result=try { models.beginTurn();converseWithinEnvelope(input) }catch(e:Exception){conversationDiagnostic.fail(e);FoundationResult.Failure(FailureCategory.REJECTED)}finally{models.endTurn()}
+        val result=try { models.beginTurn(epoch);converseWithinEnvelope(input) }catch(e:Exception){conversationDiagnostic.fail(e);FoundationResult.Failure(FailureCategory.REJECTED)}finally{models.endTurn()}
         if(result is FoundationResult.Success)diagnosticPreferences.edit().remove("lastFailure").apply()
         else {
             conversationDiagnostic.rejected(when(result){is FoundationResult.Failure->result.category.name;is FoundationResult.Unavailable->result.reason.name;else->"Rejected"})
@@ -212,6 +212,7 @@ class BrainRuntime(context: Context,private val temporal: com.mavyy.localyuki.fo
         conversationDiagnostic.enter("Evidence verification")
         val result=TurnCoordinator(verifier,one,expression,two,com.mavyy.localyuki.cognition.CognitiveComposer(one,two,conversationDiagnostic)).respond(turn.value)
         if(result !is FoundationResult.Success)return result
+        models.checkTurnActive()
         conversationDiagnostic.enter("Reply persistence")
         val text=result.value.text
         val saved=memory.appendEvidence(NewEvidence("reply-${UUID.randomUUID()}",EvidenceSourceKind.YUKI_OUTPUT,threadId,text))

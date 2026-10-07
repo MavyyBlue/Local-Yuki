@@ -1,5 +1,19 @@
 # Local Yuki — Changelog
 
+## 2026-10-07 — 0.2.6 owner-requested independent review
+
+- Preserve original cancellation epochs for queued Send/wake-phrase conversations; stale submissions cannot restart after Stop/background cancellation. Keep ordinary persistence tasks and fresh Sends usable. Check cancellation after native replies and before reply persistence.
+- Select immutable admission receipts by insertion order rather than timestamps/random IDs, preserving the latest measured envelope despite backwards clocks or formatting/ties.
+- Observe actual Binder death before a subsequent organ binds; bounded retirement timeouts retain a gate against reusing a live retiring process.
+- Include all v0.2.5 turn-budget/integrity repairs; preserve native engine, adapter v3, admissions, data/schema, app-owned continuity, keys/workflows and Lockdown. New exact-source CI and Galaxy reply remain pending.
+
+## 2026-10-07 — 0.2.5 independent role deadlines within a bounded turn
+
+- Budget the full foreground turn across its allowed serialized organs (hard cap120 seconds). Keep each organ's current-profile and immutable-receipt deadline, remaining overall time, pressure/pass restrictions and cancellation. Charge binding/startup to the organ allowance.
+- Fully hash each distinct model on first use every turn; reuse inspection only for the unchanged same private file/expected digest. Check the opened descriptor fingerprint before handoff. Reject changed/replaced/torn or unsafe-link files; Android26 always rescans. No persistent cache.
+- Copy diagnostics now include integrity reuse and individual/overall allowances. Preserve CPU adapter v3, all admissions/files, app-owned identity/continuity, schema, keys, workflows and Lockdown.
+- v0.2.4 exact-source CI passed; owner One completion/unload is confirmed. Language execution and a complete Galaxy reply remain unaccepted. New source CI awaits import.
+
 ## 2026-10-06 — 0.2.4 bounded prompt preparation
 
 - Replace repeated/verbose context with read-only contextual personality summaries, grounded affect and complete owner input; retain canonical identity and revised facets in app storage.
