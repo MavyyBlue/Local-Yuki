@@ -4,6 +4,11 @@ import com.mavyy.localyuki.foundation.embodiment.CapabilityId
 /** App-supplied syntax; compact JSON reserves measured tokens for meaning rather than indentation.
  * Models cannot select a grammar or expand its authority. Whitespace inside strings is preserved. */
 internal object OrganGrammar {
+ fun forExpression(pointCount:Int):String {
+  require(pointCount in 1..6)
+  val ids=(0 until pointCount).joinToString(" ws \",\" ws ") { "\"$it\"" }
+  return forRole(ModelRole.LANGUAGE_EXPRESSION).replace("number (ws \",\" ws number)*",ids)
+ }
  private val common="""
 ws ::= ""
 string ::= "\"" character character* "\""
@@ -15,7 +20,7 @@ source ::= "\"input\"" | "\"memory" [0-9] [0-9]? "\""
 sources ::= "[" ws source (ws "," ws source){0,7} ws "]"
 affect ::= "\"neutral\"" | "\"warmth\"" | "\"concern\"" | "\"curiosity\"" | "\"frustration\""
 """.trimIndent()
- fun forRole(role:ModelRole,sources:Set<String> = setOf("input"),capabilities:Set<CapabilityId> = emptySet()):String {
+ fun forRole(role:ModelRole,sources:Set<String> = setOf("input"),capabilities:Set<CapabilityId> = emptySet(),compactDecision:Boolean=false):String {
   require(sources.isNotEmpty() && sources.size<=29 && sources.all { it=="input" || it.matches(Regex("(memory|observation)[0-9]{1,2}")) })
   val rules=when(role) {
    ModelRole.SYSTEM_ONE -> """
@@ -37,11 +42,14 @@ root ::= "{" ws "\"affect\":" ws affect ws ",\"confidence\":" ws number ws "}" w
 """
    else -> return ""
   }
+  val chosen=if(role==ModelRole.SYSTEM_ONE && compactDecision) """
+root ::= "{" ws "\"route\":" ws ("\"RESPOND\"" | "\"REASON\"") ws ",\"confidence\":" ws number ws ",\"affect\":" ws affect ws ",\"meaning\":" ws meaning ws ",\"uncertainty\":" ws strings ws ",\"sources\":" ws sources ws "}" ws
+""" else rules
   val bounded=common.lineSequence().joinToString("\n") { if(it.startsWith("source ::=")) "source ::= "+sources.sorted().joinToString(" | ") { s->"\"\\\"$s\\\"\"" } else it }
   val actions=if(role==ModelRole.SYSTEM_TWO) {
     if(capabilities.isEmpty())rules.lineSequence().joinToString("\n") { if(it.startsWith("actions ::=")) "actions ::= \"[\" ws \"]\"" else it }
     else rules.replace("\"\\\"capability\\\":\" ws string","\"\\\"capability\\\":\" ws capability")+"\ncapability ::= "+capabilities.sortedBy { it.name }.joinToString(" | ") { "\"\\\"${it.name}\\\"\"" }
-  } else rules
+  } else chosen
   return actions.trimIndent()+"\n"+bounded+"\n"
  }
 }

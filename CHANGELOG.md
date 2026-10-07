@@ -1,5 +1,13 @@
 # Local Yuki — Changelog
 
+## 2026-10-06 — 0.2.4 bounded prompt preparation
+
+- Replace repeated/verbose context with read-only contextual personality summaries, grounded affect and complete owner input; retain canonical identity and revised facets in app storage.
+- Select complete JSON context candidates using the model tokenizer and pair each with its allowed evidence/action grammar. Mark omissions unknown; suppress life/action proposals after shortening. Never cut owner input or expression points.
+- Bound preparation at256 tokens (192 with less than15 seconds remaining). Use a six-field System One contract for output allowances up to128; optional metadata defaults safely. Preserve the whole-turn deadline, admissions and full per-pass file integrity checks.
+- Constrain expression point IDs to the complete supplied list; uncertainty cannot become an invented extra point. Request faithful direct dialogue and brief affectionate greetings. Preserve full uncertainty verbatim in the app reply while giving expression a compact flag.
+- Capture failed preparation time, token progress, decoder result, candidate index and unload for Copy diagnostics. Verify real weights, candidate/refusal/deadline paths and descriptor-denied execution. Exact new-source CI and Galaxy conversation remain pending.
+
 ## 2026-10-06 — 0.2.3 conversation diagnostics and bounded prompts
 
 - Replace the shared setup fallback with the actual failed conversation stage and bounded reason; retain per-pass profile/timing/output/unload diagnostics locally. Failure status is never saved as a Yuki reply.

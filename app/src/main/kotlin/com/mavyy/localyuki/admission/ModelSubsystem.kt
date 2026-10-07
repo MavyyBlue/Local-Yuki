@@ -15,13 +15,13 @@ import java.util.UUID
 internal interface OrganAdapter {
     val id:String;val version:Int
     fun supports(model:ModelDescriptor,metadata:GgufMetadata):Boolean
-    fun execute(file:File,profile:SafeRuntimeProfile,system:String,user:String,embedding:Boolean,grammar:String,safe:()->Boolean,epoch:Long):OrganResult
+    fun execute(file:File,profile:SafeRuntimeProfile,system:String,user:String,embedding:Boolean,grammar:String,safe:()->Boolean,epoch:Long,prompts:List<OrganPrompt>?=null):OrganResult
 }
 internal class CpuGgufAdapter(context:Context):OrganAdapter {
     override val id="llama-cpp-cpu-b5046";override val version=3
     private val native=NativeSupervisor(context)
     override fun supports(model:ModelDescriptor,metadata:GgufMetadata)=model.format==ModelFormat.GGUF && metadata.parameters>0
-    override fun execute(file:File,profile:SafeRuntimeProfile,system:String,user:String,embedding:Boolean,grammar:String,safe:()->Boolean,epoch:Long)=native.run(file,profile,system,user,embedding,grammar,safe,epoch)
+    override fun execute(file:File,profile:SafeRuntimeProfile,system:String,user:String,embedding:Boolean,grammar:String,safe:()->Boolean,epoch:Long,prompts:List<OrganPrompt>?)=native.run(file,profile,system,user,embedding,grammar,safe,epoch,prompts)
 }
 data class OwnerModel(val id:String,val manifest:JSONObject,val activeRoles:Set<ModelRole>)
 /** A shared file can have different measured limits for each independently admitted role. */
@@ -168,14 +168,15 @@ class ModelSubsystem(context:Context,private val governor:ResourceGovernor):Auto
             val result=probe.read(com.mavyy.localyuki.resource.OwnerVisibility.active,Instant.now())
             result is FoundationResult.Success && result.value.foreground && result.value.thermal!=ThermalPressure.UNKNOWN && result.value.thermal<ThermalPressure.MODERATE && !result.value.lowMemory &&
                 result.value.availableBytes>512*ResourceGovernor.MIB && (result.value.charging||(result.value.batteryPercent?:0)>5) && !result.value.powerSave && epoch==NativeSupervisor.cancellationEpoch()
-        },epoch) } finally { governor.release(id) }
+        },epoch,if(role==ModelRole.EMBEDDING)null else PromptPreparation.candidates(role,user,profile.output)) } finally { governor.release(id) }
     }
     internal fun infer(role:ModelRole,system:String,user:String,maxOutput:Int?=null):OrganResult {
         lastInference=JSONObject().put("role",role.name).put("previousPass",if(turnBudget.get()!=null)lastInference else null)
         checkTurnActive()
         turnBudget.get()?.let { b->check(b.remaining>0 && android.os.SystemClock.elapsedRealtime()<b.until) { "Cognitive pass/time budget exhausted" };b.remaining-- }
         val active=(models() as? FoundationResult.Success)?.value?.singleOrNull { role in it.activeRoles }?:error("No admitted $role model enabled")
-        val (d,m)=inspect(active,role);require(active.manifest.getJSONArray("acceptedRoles").let { a->(0 until a.length()).any { a.getString(it)==role.name } })
+        val integrityStart=android.os.SystemClock.elapsedRealtime()
+        val (d,m)=inspect(active,role);lastInference?.put("integrityMs",android.os.SystemClock.elapsedRealtime()-integrityStart);require(active.manifest.getJSONArray("acceptedRoles").let { a->(0 until a.length()).any { a.getString(it)==role.name } })
         val adapter=adapters.singleOrNull { it.id==active.manifest.getString("adapter")&&it.version==active.manifest.getInt("adapterVersion")&&it.supports(d,m) }?:error("Adapter version unavailable; readmit")
         val proof=db.read { sql->db.rows(sql,"SELECT manifest FROM organ_receipt WHERE model_id=? AND role=? AND accepted=1 ORDER BY created DESC,id DESC LIMIT 1",active.id,role.name).firstOrNull()?.first()?.let(::JSONObject) ?: error("Admission receipt missing") }
         require(proof is FoundationResult.Success && proof.value.getString("sha256")==d.sha256 && proof.value.getString("adapter")==adapter.id && proof.value.getInt("adapterVersion")==adapter.version) { "Admission receipt does not authorize this engine" }
@@ -185,10 +186,14 @@ class ModelSubsystem(context:Context,private val governor:ResourceGovernor):Auto
         check(remaining>=1000) { "Cognitive turn deadline exhausted" }
         val p=runtimeProfileForRole(current,admitted,remaining,maxOutput)
         lastInference?.put("mode",p.mode.name)?.put("outputLimit",p.output)?.put("context",p.context)?.put("deadlineMs",p.deadlineMillis)
-        val boundedSystem=system+"\nOutput allowance: ${p.output} generated tokens total, including every JSON field. Keep content brief and complete."
-        val result=execute(active,role,p,boundedSystem,user,m.estimatedMemory(d.fileBytes,p.context),adapter)
+        val boundedSystem=system+"\nOutput limit: ${p.output} tokens. Brief, complete JSON."
+        val result=try { execute(active,role,p,boundedSystem,user,m.estimatedMemory(d.fileBytes,p.context),adapter) }catch(e:OrganExecutionFailure) { recordPreparation(e.measurement);throw e }
         lastInference?.put("startupMs",result.startupMs)?.put("preparationMs",result.preparationMs)?.put("generationMs",result.generationMs)?.put("generatedTokens",result.tokens)?.put("outputLimitReached",result.tokens>=p.output)?.put("contextShortened",result.contextTruncated)?.put("unloadVerified",result.unloaded)
+        recordPreparation(result)
         return result
+    }
+    private fun recordPreparation(result:OrganResult) {
+        lastInference?.put("startupMs",result.startupMs)?.put("preparationMs",result.preparationMs)?.put("generationMs",result.generationMs)?.put("promptTokens",result.promptTokens)?.put("decodedPromptTokens",result.decodedPrompt)?.put("selectedCandidate",result.selectedCandidate)?.put("unloadVerified",result.unloaded)
     }
     fun activeHash(role:ModelRole):String?=(models() as? FoundationResult.Success)?.value?.firstOrNull { role in it.activeRoles }?.manifest?.optString("sha256")
     fun disable(role:ModelRole):FoundationResult<Boolean> = db.write { it.execSQL("DELETE FROM organ_role WHERE role=?",arrayOf(role.name));true }

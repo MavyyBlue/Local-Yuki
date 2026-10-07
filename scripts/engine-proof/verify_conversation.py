@@ -17,9 +17,14 @@ def run(role,enum,user,deadline):
         fixture_hashes[f.name]=hashlib.sha256(f.read_bytes()).hexdigest()
         (fixtures/f.name).write_bytes(f.read_bytes())
     command=[a.java,'--add-opens','java.base/java.io=ALL-UNNAMED','-Djava.library.path='+a.library,
-             '-Dyuki.role='+role,'-Dyuki.production=true','-Dyuki.output=64','-Dyuki.deadline='+str(deadline),
+             '-Dyuki.role='+role,'-Dyuki.promptLimit='+str(192 if role=='language' else 256),'-Dyuki.production=true','-Dyuki.output=64','-Dyuki.deadline='+str(deadline),
              '-Dyuki.system='+str(system),'-Dyuki.user='+str(user),'-Dyuki.grammar='+str(grammar),
              '-cp',a.classes,'com.mavyy.localyuki.inference.NativeOrgan',a.model]
+    prefix=contracts/(role+'-candidate-')
+    if Path(str(prefix)+'0-user.json').exists():
+        command.insert(1,'-Dyuki.planPrefix='+str(prefix))
+        for f in contracts.glob(role+'-candidate-*'):
+            fixture_hashes[f.name]=hashlib.sha256(f.read_bytes()).hexdigest();(fixtures/f.name).write_bytes(f.read_bytes())
     # Language-only avoids the harness's additional embedding proof in this conversation deadline.
     process=subprocess.run(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=deadline/1000+20)
     (results/(role+'.log')).write_text(process.stdout)
@@ -27,26 +32,30 @@ def run(role,enum,user,deadline):
     line=next(line for line in process.stdout.splitlines() if line.startswith('GENERATION '))
     output=base64.b64decode(line.split(' outputBase64=')[1]).decode();decoded=json.loads(output)
     metrics=json.loads(re.search(r'metrics=(\[[^]]+\])',line).group(1))
-    assert 0<metrics[4]<=64 and metrics[5]==0 and 'UNLOAD completed' in process.stdout
+    assert 0<metrics[4]<=64 and metrics[8]<=256 and metrics[9]==metrics[8] and 'UNLOAD completed' in process.stdout
     outputs[enum]=output;measurements[enum]={'startupMs':int(re.search(r'startupMs=(\d+)',line).group(1)),
         'inferenceMs':int(re.search(r'inferenceMs=(\d+)',line).group(1)),
-        'preparationMs':metrics[6],'generationMs':metrics[7],'generatedTokens':metrics[4],'deadlineMs':deadline}
+        'preparationMs':metrics[6],'generationMs':metrics[7],'generatedTokens':metrics[4],'deadlineMs':deadline,'promptTokens':metrics[8],'decodedPromptTokens':metrics[9],'selectedCandidate':metrics[10],'contextShortened':bool(metrics[5])}
     print(enum,json.dumps(measurements[enum]),flush=True);return decoded
 
 started=time.monotonic()
 one=run('one','SYSTEM_ONE',contracts/'one-full-user.json',30000)
 assert one['route']=='RESPOND' and one['confidence']>=60 and len(one['meaning'])==1
 uncertainty=list(dict.fromkeys(json.loads((contracts/'one-full-user.json').read_text())['uncertainty']+one['uncertainty']))
+if measurements['SYSTEM_ONE']['contextShortened']:
+    uncertainty=list(dict.fromkeys(uncertainty+['Conversation context was shortened to protect the device; omitted information is unknown.']))
 language_user=results/'language-full-user.json'
-language_user.write_text(json.dumps({'points':[{'id':i,'meaning':point} for i,point in enumerate(one['meaning'])],'uncertainty':uncertainty}))
+language_user.write_text(json.dumps({'points':[{'id':i,'meaning':point} for i,point in enumerate(one['meaning'])],'uncertain':bool(uncertainty)}))
 remaining=30000-int((time.monotonic()-started)*1000);assert remaining>=1000
 language=run('language','LANGUAGE_EXPRESSION',language_user,remaining)
 assert set(language['pointIds'])==set(range(len(one['meaning']))) and language['text'].strip()
+assert re.search(r'\b(hello|hi|hey)\b',language['text'],re.I), 'Greeting meaning was lost by expression'
 greeting_ms=int((time.monotonic()-started)*1000);assert greeting_ms<30000
 two=run('two','SYSTEM_TWO',contracts/'two-full-user.json',30000)
 assert two['points'] and two['sources'] and two['actions']==[] and two['uncertainty']
 with open(a.model,'rb') as model_file:model_hash=hashlib.file_digest(model_file,'sha256').hexdigest()
 report={'version':1,'backend':'shipping JNI CPU, host only','outputLimit':64,'greetingWallMs':greeting_ms,
+        'hostProfile':{'context':2048,'threads':2,'batch':64,'longDeadlinePromptCap':256,'shortDeadlinePromptCap':192},
         'greetingIncludesTwoSequentialOrgans':True,'systemTwoProof':'separate uncertain-question execution, not a complete deep-reasoning turn',
         'modelSha256':model_hash,
         'fixtureSha256':fixture_hashes,'measurements':measurements,'outputs':outputs,'galaxyAcceptance':'pending'}

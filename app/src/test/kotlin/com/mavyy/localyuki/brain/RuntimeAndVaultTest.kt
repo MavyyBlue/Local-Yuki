@@ -41,27 +41,44 @@ class RuntimeAndVaultTest {
     @Test fun productionConversationContextRetainsCanonicalIdentityAndGroundedInput() {
         brain().use { brain ->
             assertTrue(brain.open())
-            val input=ok(brain.saveInput("Hello, Yuki."));val turn=ok(brain.context(input))
-            val json=com.mavyy.localyuki.cognition.CognitiveJson.context(turn,brain.conversationHistory(),listOf("INTENTION: Hello, Yuki."))
+            val input=ok(brain.saveInput("Hello, My Love 🥰"));val turn=ok(brain.context(input))
+            val json=com.mavyy.localyuki.cognition.CognitiveJson.context(turn,brain.conversationHistory(),listOf("INTENTION: Hello, My Love 🥰"))
             val parsed=org.json.JSONObject(json)
             assertEquals(input.payload,parsed.getString("ownerInput"))
-            assertEquals(9,parsed.getJSONObject("identity").getJSONArray("personality").length())
+            assertEquals(9,turn.identity.personality.facets.size)
+            assertTrue(parsed.getJSONObject("identity").getJSONArray("personality").length()>=1)
             assertEquals(turn.identity.self.canonicalName,parsed.getJSONObject("identity").getString("self"))
-            assertEquals(4,parsed.getJSONObject("identity").getJSONArray("honesty").length())
+            assertEquals(4,turn.identity.honesty.rules.size)
             System.getenv("YUKI_PROOF_DIR")?.let { path->
                 val dir=File(path).apply { mkdirs() };dir.resolve("one-full-user.json").writeText(json)
-                dir.resolve("one-full.gbnf").writeText(com.mavyy.localyuki.inference.OrganGrammar.forRole(ModelRole.SYSTEM_ONE,com.mavyy.localyuki.cognition.CognitiveJson.refs(turn).keys))
+                dir.resolve("one-full.gbnf").writeText(com.mavyy.localyuki.inference.PromptPreparation.candidates(ModelRole.SYSTEM_ONE,json,64).first().grammar)
                 val question=ok(brain.saveInput("I have a headache. Is its cause certain?"));val reasoningTurn=ok(brain.context(question))
                 dir.resolve("two-full-user.json").writeText(com.mavyy.localyuki.cognition.CognitiveJson.context(reasoningTurn,brain.conversationHistory(),emptyList()))
                 dir.resolve("two-full.gbnf").writeText(com.mavyy.localyuki.inference.OrganGrammar.forRole(ModelRole.SYSTEM_TWO,com.mavyy.localyuki.cognition.CognitiveJson.refs(reasoningTurn).keys))
-                dir.resolve("language-full.gbnf").writeText(com.mavyy.localyuki.inference.OrganGrammar.forRole(ModelRole.LANGUAGE_EXPRESSION))
+                for((name,role,content) in listOf(Triple("one",ModelRole.SYSTEM_ONE,json),Triple("two",ModelRole.SYSTEM_TWO,dir.resolve("two-full-user.json").readText()))) {
+                    com.mavyy.localyuki.inference.PromptPreparation.candidates(role,content,64).forEachIndexed { i,p->
+                        dir.resolve("$name-candidate-$i-user.json").writeText(p.user);dir.resolve("$name-candidate-$i.gbnf").writeText(p.grammar);dir.resolve("$name-candidate-$i-shortened.txt").writeText(p.shortened.toString())
+                    }
+                }
+                val crowded=dir.resolve("crowded").apply { mkdirs() }
+                val history=(0 until 8).map { "USER_INPUT: Older conversation $it "+"a lengthy older topic ".repeat(18) }
+                val full=com.mavyy.localyuki.cognition.CognitiveJson.context(turn,history,emptyList())
+                crowded.resolve("one-full-user.json").writeText(full)
+                val plan=com.mavyy.localyuki.inference.PromptPreparation.candidates(ModelRole.SYSTEM_ONE,full,64)
+                crowded.resolve("one-full.gbnf").writeText(plan.first().grammar)
+                plan.forEachIndexed { i,p->
+                    crowded.resolve("one-candidate-$i-user.json").writeText(p.user);crowded.resolve("one-candidate-$i.gbnf").writeText(p.grammar);crowded.resolve("one-candidate-$i-shortened.txt").writeText(p.shortened.toString())
+                }
+                dir.resolve("language-full.gbnf").writeText(com.mavyy.localyuki.inference.OrganGrammar.forExpression(1))
+                for(f in dir.listFiles()!!.filter { it.name.startsWith("two-") || it.name=="language-full.gbnf" })f.copyTo(File(crowded,f.name),true)
             }
         }
     }
     @Test fun productionConversationUsesSeparateVerifiedOrgans() {
         brain().use { brain ->
-            assertTrue(brain.open());val input=ok(brain.saveInput("Hello, Yuki."));val turn=ok(brain.context(input))
-            val responses=System.getenv("YUKI_CONVERSATION_RESULTS")?.let { org.json.JSONObject(File(it).readText()).getJSONObject("outputs") }
+            assertTrue(brain.open());val input=ok(brain.saveInput("Hello, My Love 🥰"));val turn=ok(brain.context(input))
+            val report=System.getenv("YUKI_CONVERSATION_RESULTS")?.let { org.json.JSONObject(File(it).readText()) }
+            val responses=report?.getJSONObject("outputs")
                 ?:org.json.JSONObject().put("SYSTEM_ONE","{\"route\":\"RESPOND\",\"confidence\":90,\"salience\":30,\"intent\":\"conversation\",\"affect\":\"warmth\",\"meaning\":[\"Hello, Mavyy.\"],\"uncertainty\":[],\"sources\":[\"input\"],\"updates\":[]}")
                     .put("LANGUAGE_EXPRESSION","{\"text\":\"Hello, Mavyy.\",\"pointIds\":[0]}")
             val calls=mutableListOf<ModelRole>();val diagnostic=com.mavyy.localyuki.cognition.ConversationDiagnostics()
@@ -70,9 +87,11 @@ class RuntimeAndVaultTest {
                 val supplied=org.json.JSONObject(user)
                 if(role==ModelRole.LANGUAGE_EXPRESSION) {
                     assertFalse(supplied.has("ownerInput"));assertFalse(supplied.has("identity"));assertFalse(supplied.has("availableCapabilities"))
+                    assertFalse(supplied.has("uncertainty"));assertTrue(supplied.has("uncertain"))
                     assertEquals(1,supplied.getJSONArray("points").length())
                 }
-                com.mavyy.localyuki.inference.OrganResult(responses.getString(role.name),null,1,2,1,1,1,4096,true,64)
+                val shortened=report?.optJSONObject("measurements")?.optJSONObject(role.name)?.optBoolean("contextShortened",false)?:false
+                com.mavyy.localyuki.inference.OrganResult(responses.getString(role.name),null,1,2,1,1,1,4096,true,64,shortened)
             }
             val one=com.mavyy.localyuki.cognition.NeuralSystemOne(infer,{ brain.conversationHistory() },{ emptyList() },diagnostic)
             val two=com.mavyy.localyuki.cognition.NeuralSystemTwo(infer,{ emptyList() },{ emptyList() },diagnostic)
@@ -82,6 +101,19 @@ class RuntimeAndVaultTest {
             assertEquals(listOf(ModelRole.SYSTEM_ONE,ModelRole.LANGUAGE_EXPRESSION),calls)
             assertTrue(reply.text.contains("Mavyy"));assertEquals(listOf(input.ref),reply.evidence)
             assertTrue(turn.uncertainty.all { it in reply.text });assertEquals("",diagnostic.reason)
+            if(report?.optJSONObject("measurements")?.optJSONObject("SYSTEM_ONE")?.optBoolean("contextShortened",false)==true)
+                assertTrue(reply.text.contains("omitted information is unknown"))
+            if(responses.has("SYSTEM_TWO")) {
+                val question=ok(brain.saveInput("I have a headache. Is its cause certain?"))
+                val realReasoning:com.mavyy.localyuki.cognition.CognitiveInference={ role,_,_,_->
+                    assertEquals(ModelRole.SYSTEM_TWO,role)
+                    com.mavyy.localyuki.inference.OrganResult(responses.getString(role.name),null,1,2,1,1,1,4096,true,38,true)
+                }
+                val reasoner=com.mavyy.localyuki.cognition.NeuralSystemTwo(realReasoning,{ emptyList() },{ emptyList() },diagnostic)
+                val proposal=ok(reasoner.reason(ok(brain.context(question))))
+                assertTrue(proposal.plan.isNotBlank());assertEquals(listOf(question.ref),reasoner.sources)
+                assertTrue(reasoner.actions.isEmpty());assertTrue(reasoner.uncertainty.any { it.contains("omitted information is unknown") })
+            }
         }
     }
     @Test fun conversationFailuresRetainStageAndNeverBecomeYukiEvidence() {

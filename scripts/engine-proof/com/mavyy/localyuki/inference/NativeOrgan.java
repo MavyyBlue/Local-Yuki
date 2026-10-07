@@ -5,6 +5,7 @@ public final class NativeOrgan {
  static {System.loadLibrary("yuki-organ");}
  native long load(int fd,int context,int threads,int batch,boolean embeddings,long deadline);
  native byte[] generate(long h,byte[] system,byte[] user,byte[] grammar,int output,long deadline);
+ native byte[] generateBounded(long h,byte[] system,byte[][] users,byte[][] grammars,boolean[] shortened,int output,int promptLimit,long deadline);
  native float[] embed(long h,byte[] text,long deadline);
  native long[] metrics(long h);native void unload(long h);
  static byte[] utf(String s){return s.getBytes(StandardCharsets.UTF_8);}
@@ -23,10 +24,23 @@ public final class NativeOrgan {
     String user=role.equals("one")?"Owner input: Hello, Yuki. Prepare Yuki greeting Mavyy back, not a description of the input. Return a concise prepared greeting. uncertainty and updates should be empty.":role.equals("two")?"Owner input: I have a headache. Is its cause certain? Prepared conclusion: the supplied evidence cannot establish a diagnosis. Sources: input. No action is required.":"{\"points\":[{\"id\":0,\"meaning\":\"Hello, Mavyy. I am glad you are here.\"}],\"uncertainty\":[]}";
     if(System.getProperty("yuki.system")!=null)system=java.nio.file.Files.readString(java.nio.file.Path.of(System.getProperty("yuki.system")));
     if(System.getProperty("yuki.user")!=null)user=java.nio.file.Files.readString(java.nio.file.Path.of(System.getProperty("yuki.user")));
-    if(Boolean.getBoolean("yuki.production"))system+="\nOutput allowance: "+outputLimit+" generated tokens total, including every JSON field. Keep content brief and complete.";
+    if(Boolean.getBoolean("yuki.production"))system+="\nOutput limit: "+outputLimit+" tokens. Brief, complete JSON.";
     byte[] grammar=java.nio.file.Files.readAllBytes(java.nio.file.Path.of(System.getProperty("yuki.grammar")));
     long inferenceStart=System.nanoTime();
-    String output=new String(organ.generate(h,utf(system),utf(user),grammar,outputLimit,deadline),StandardCharsets.UTF_8);
+    byte[][] users={utf(user)},grammars={grammar};boolean[] shortened={false};
+    if(System.getProperty("yuki.planPrefix")!=null) {
+     java.util.List<byte[]> u=new java.util.ArrayList<>(),g=new java.util.ArrayList<>();java.util.List<Boolean> f=new java.util.ArrayList<>();
+     String prefix=System.getProperty("yuki.planPrefix");
+     for(int i=0;i<4;i++) {
+      var path=java.nio.file.Path.of(prefix+i+"-user.json");if(!java.nio.file.Files.exists(path))break;
+      u.add(java.nio.file.Files.readAllBytes(path));g.add(java.nio.file.Files.readAllBytes(java.nio.file.Path.of(prefix+i+".gbnf")));
+      f.add(Boolean.parseBoolean(java.nio.file.Files.readString(java.nio.file.Path.of(prefix+i+"-shortened.txt")).trim()));
+     }
+     users=u.toArray(new byte[0][]);grammars=g.toArray(new byte[0][]);shortened=new boolean[f.size()];for(int i=0;i<f.size();i++)shortened[i]=f.get(i);
+    }
+    String output=new String(Boolean.getBoolean("yuki.production")?
+      organ.generateBounded(h,utf(system),users,grammars,shortened,outputLimit,Integer.getInteger("yuki.promptLimit",256),deadline):
+      organ.generate(h,utf(system),utf(user),grammar,outputLimit,deadline),StandardCharsets.UTF_8);
     long inferenceMs=(System.nanoTime()-inferenceStart)/1000000;
     long[] metrics=organ.metrics(h);
     if(metrics.length<8||metrics[4]<=0||metrics[6]<=0||metrics[7]<=0||metrics[6]+metrics[7]>inferenceMs+3)
